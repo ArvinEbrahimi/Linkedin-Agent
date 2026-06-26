@@ -25,6 +25,7 @@
 
 ## Documentation
 
+- [راهنمای کاربری فارسی (RTL)](docs/USER_GUIDE_FA.md) ← **شروع از اینجا**
 - [Product Specification](docs/PRODUCT_SPEC.md)
 - [Technical Architecture](docs/ARCHITECTURE.md)
 - [LinkedIn Setup](docs/LINKEDIN_SETUP.md) ← OAuth + data import
