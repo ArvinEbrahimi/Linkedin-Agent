@@ -1,9 +1,10 @@
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+
 from langchain_core.messages import HumanMessage
 
-from app.api.deps import get_graph
+from app.api.deps import assert_user_access, get_graph
 from app.config import get_settings
 from app.core.exceptions import ConfigurationError
 from app.core.observability import build_run_config
@@ -25,8 +26,13 @@ router = APIRouter(prefix="/chat", tags=["chat"])
         "memory via the checkpointer."
     ),
 )
-async def chat(request: ChatRequest, graph=Depends(get_graph)) -> ChatResponse:
+async def chat(
+    request: ChatRequest,
+    http_request: Request,
+    graph=Depends(get_graph),
+) -> ChatResponse:
     settings = get_settings()
+    assert_user_access(http_request.state.account, request.user_id, settings)
     config = build_run_config(
         settings,
         configurable={"thread_id": request.thread_id},

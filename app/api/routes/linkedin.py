@@ -1,9 +1,9 @@
 import logging
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse
 
-from app.api.deps import get_linkedin_service
+from app.api.deps import assert_user_access, get_linkedin_service
 from app.config import get_settings
 from app.core.exceptions import LinkAidError
 from app.models.linkedin import (
@@ -29,9 +29,11 @@ router = APIRouter(prefix="/linkedin", tags=["linkedin"])
     ),
 )
 async def linkedin_auth_url(
+    http_request: Request,
     user_id: str = Query(default="default"),
     linkedin_service: LinkedInService = Depends(get_linkedin_service),
 ) -> LinkedInAuthUrlResponse:
+    assert_user_access(http_request.state.account, user_id, get_settings())
     auth_url, state = linkedin_service.oauth.create_auth_url(user_id)
     return LinkedInAuthUrlResponse(auth_url=auth_url, state=state)
 
@@ -77,8 +79,10 @@ async def linkedin_auth_callback(
 )
 async def linkedin_status(
     user_id: str,
+    http_request: Request,
     linkedin_service: LinkedInService = Depends(get_linkedin_service),
 ) -> LinkedInStatusResponse:
+    assert_user_access(http_request.state.account, user_id, get_settings())
     return LinkedInStatusResponse.model_validate(linkedin_service.oauth.get_status(user_id))
 
 
@@ -88,8 +92,10 @@ async def linkedin_status(
 )
 async def linkedin_disconnect(
     user_id: str,
+    http_request: Request,
     linkedin_service: LinkedInService = Depends(get_linkedin_service),
 ) -> LinkedInStatusResponse:
+    assert_user_access(http_request.state.account, user_id, get_settings())
     linkedin_service.oauth.disconnect(user_id)
     return LinkedInStatusResponse(user_id=user_id, connected=False)
 
@@ -105,8 +111,10 @@ async def linkedin_disconnect(
 )
 async def linkedin_import(
     user_id: str,
+    http_request: Request,
     file: UploadFile = File(..., description="LinkedIn data export .zip"),
     linkedin_service: LinkedInService = Depends(get_linkedin_service),
 ) -> LinkedInImportResult:
+    assert_user_access(http_request.state.account, user_id, get_settings())
     content = await file.read()
     return linkedin_service.import_data_export(user_id, content)

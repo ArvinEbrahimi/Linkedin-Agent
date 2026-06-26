@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     )
     ui_base_url: str = Field(default="http://localhost:8501", alias="UI_BASE_URL")
     app_secret_key: str = Field(default="change-me-in-production", alias="APP_SECRET_KEY")
+    auth_required: bool = Field(default=False, alias="AUTH_REQUIRED")
+    jwt_expire_days: int = Field(default=7, alias="JWT_EXPIRE_DAYS")
 
     langfuse_public_key: str | None = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key: str | None = Field(default=None, alias="LANGFUSE_SECRET_KEY")
