@@ -31,7 +31,8 @@
 
 ## Project Status
 
-🚧 **Planning complete — implementation starting at Phase 0**
+✅ **Phase 0 complete** — FastAPI scaffold, models, tests  
+🚧 **Phase 1 in progress** — LangGraph + Groq core agent
 
 See [TASKS.md](TASKS.md) for the full phased roadmap (8 phases, 50+ tasks).
 
