@@ -37,6 +37,12 @@ OPENAPI_TAGS = [
         "name": "strategy",
         "description": "Personal narrative, competitor differentiation, and content calendars.",
     },
+    {
+        "name": "linkedin",
+        "description": (
+            "Connect LinkedIn account (OAuth read-only) and import official data export ZIP."
+        ),
+    },
 ]
 
 API_DESCRIPTION = """

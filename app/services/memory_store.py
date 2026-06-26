@@ -202,6 +202,8 @@ class MemoryService:
                     "target_audience": profile.target_audience,
                     "tone_preference": profile.tone_preference,
                     "language_mix": profile.language_mix,
+                    "linkedin_headline": profile.linkedin_headline,
+                    "about_summary": profile.about_summary,
                 }
             )
 

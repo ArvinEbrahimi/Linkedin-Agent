@@ -16,16 +16,35 @@ def _profile_needs_onboarding(client: LinkAidClient, user_id: str) -> bool:
         profile = data.get("profile")
         if profile and profile.get("niche"):
             st.session_state.onboarding_complete = True
+            if profile.get("language_mix"):
+                st.session_state.language_mix = profile["language_mix"]
             return False
         return True
     except LinkAidAPIError:
         return True
 
 
+def _prefill_from_linkedin(client: LinkAidClient, user_id: str) -> None:
+    if st.session_state.get("ob_prefilled"):
+        return
+    try:
+        status = client.linkedin_status(user_id)
+        if status.get("connected") and status.get("name"):
+            st.session_state.ob_name = status["name"]
+        profile = client.get_profile(user_id).get("profile") or {}
+        if profile.get("linkedin_headline") and not st.session_state.get("ob_niche"):
+            st.session_state.ob_niche = profile["linkedin_headline"]
+        st.session_state.ob_prefilled = True
+    except LinkAidAPIError:
+        pass
+
+
 def render_onboarding(client: LinkAidClient, user_id: str) -> bool:
     """Render wizard. Returns True when onboarding is still required."""
     if not _profile_needs_onboarding(client, user_id):
         return False
+
+    _prefill_from_linkedin(client, user_id)
 
     st.subheader("👋 Welcome to LinkAid")
     st.caption(

@@ -23,6 +23,11 @@ class UserConstraints(BaseModel):
 
 class UserProfile(BaseModel):
     user_id: str = Field(default="default")
+    linkedin_sub: str | None = None
+    linkedin_headline: str | None = None
+    linkedin_profile_url: str | None = None
+    email: str | None = None
+    about_summary: str | None = None
     name: str | None = None
     role: Literal["Backend", "FullStack", "AI Engineer"] | None = None
     years_experience: int | None = Field(default=None, ge=0)

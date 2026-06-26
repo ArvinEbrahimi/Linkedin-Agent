@@ -38,3 +38,15 @@ class HealthResponse(BaseModel):
     app: str
     version: str
     env: str
+    groq_configured: bool = False
+    linkedin_oauth_configured: bool = False
+
+
+class ReadyResponse(BaseModel):
+    """Readiness checklist for local setup and LinkedIn integration."""
+
+    status: Literal["ready", "degraded", "not_ready"] = "not_ready"
+    groq_configured: bool = False
+    linkedin_oauth_configured: bool = False
+    checks: dict[str, bool] = Field(default_factory=dict)
+    messages: list[str] = Field(default_factory=list)

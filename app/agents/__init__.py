@@ -4,6 +4,7 @@ from app.agents.graph import build_graph
 from app.config import Settings
 from app.services.advisor import AdvisorService
 from app.services.content import ContentService
+from app.services.linkedin import LinkedInService
 from app.services.llm import LLMService
 from app.services.memory_store import HashEmbeddingFunction, MemoryService
 from app.services.networking import NetworkingService
@@ -21,13 +22,14 @@ _memory_service: MemoryService | None = None
 _advisor_service: AdvisorService | None = None
 _strategy_service: StrategyService | None = None
 _search_service: SearchService | None = None
+_linkedin_service: LinkedInService | None = None
 _rate_limiter: OutreachRateLimiter | None = None
 
 
 def init_agent(settings: Settings) -> CompiledStateGraph:
     global _graph, _llm_service, _content_service, _networking_service
     global _profile_service, _memory_service, _advisor_service, _strategy_service
-    global _search_service, _rate_limiter
+    global _search_service, _linkedin_service, _rate_limiter
 
     _llm_service = LLMService(settings)
     _content_service = ContentService(_llm_service)
@@ -39,6 +41,7 @@ def init_agent(settings: Settings) -> CompiledStateGraph:
     _advisor_service = AdvisorService(_llm_service, _memory_service)
     _search_service = SearchService(settings)
     _strategy_service = StrategyService(_llm_service, _memory_service, _search_service)
+    _linkedin_service = LinkedInService(settings, _memory_service)
     _rate_limiter = OutreachRateLimiter(
         settings.outreach_limit_db_path,
         daily_limit=settings.max_daily_outreach,
@@ -113,3 +116,9 @@ def get_search_service() -> SearchService:
     if _search_service is None:
         raise RuntimeError("Search service not initialized")
     return _search_service
+
+
+def get_linkedin_service() -> LinkedInService:
+    if _linkedin_service is None:
+        raise RuntimeError("LinkedIn service not initialized")
+    return _linkedin_service

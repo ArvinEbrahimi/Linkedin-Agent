@@ -21,4 +21,6 @@ async def health_check() -> HealthResponse:
         app=settings.app_name,
         version=settings.app_version,
         env=settings.env,
+        groq_configured=settings.groq_configured,
+        linkedin_oauth_configured=settings.linkedin_oauth_configured,
     )

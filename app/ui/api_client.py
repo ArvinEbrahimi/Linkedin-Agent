@@ -48,6 +48,25 @@ class LinkAidClient:
     def health(self) -> dict:
         return self._request("GET", "/api/v1/health")
 
+    def ready(self) -> dict:
+        return self._request("GET", "/api/v1/ready")
+
+    def linkedin_auth_url(self, user_id: str) -> dict:
+        return self._request("GET", f"/api/v1/linkedin/auth/url?user_id={user_id}")
+
+    def linkedin_status(self, user_id: str) -> dict:
+        return self._request("GET", f"/api/v1/linkedin/status/{user_id}")
+
+    def linkedin_disconnect(self, user_id: str) -> dict:
+        return self._request("DELETE", f"/api/v1/linkedin/disconnect/{user_id}")
+
+    def linkedin_import(self, user_id: str, file_bytes: bytes, filename: str) -> dict:
+        return self._request(
+            "POST",
+            f"/api/v1/linkedin/import/{user_id}",
+            files={"file": (filename, file_bytes, "application/zip")},
+        )
+
     def chat(self, message: str, *, thread_id: str, user_id: str) -> dict:
         return self._request(
             "POST",

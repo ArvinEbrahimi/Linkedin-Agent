@@ -15,6 +15,7 @@ from app.models.content import ContentPostLLMOutput, HookVariant
 from app.models.responses import AlternativeOption, LinkAidResponse
 from app.services.advisor import AdvisorService
 from app.services.content import ContentService
+from app.services.linkedin import LinkedInService
 from app.services.llm import LLMService
 from app.services.memory_store import HashEmbeddingFunction, MemoryService
 from app.services.networking import NetworkingService
@@ -87,6 +88,7 @@ def smoke_app(tmp_path):
     advisor = AdvisorService(service, memory)
     search = SearchService(settings)
     strategy = StrategyService(service, memory, search)
+    linkedin = LinkedInService(settings, memory)
 
     graph = build_graph(
         service,
@@ -107,6 +109,7 @@ def smoke_app(tmp_path):
     app.state.memory_service = memory
     app.state.advisor_service = advisor
     app.state.strategy_service = strategy
+    app.state.linkedin_service = linkedin
     return app
 
 

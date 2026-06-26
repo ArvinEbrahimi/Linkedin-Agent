@@ -27,6 +27,7 @@
 
 - [Product Specification](docs/PRODUCT_SPEC.md)
 - [Technical Architecture](docs/ARCHITECTURE.md)
+- [LinkedIn Setup](docs/LINKEDIN_SETUP.md) ← OAuth + data import
 - [Implementation Tasks](TASKS.md) ← start here for development
 
 ## Project Status
@@ -39,7 +40,8 @@
 ✅ **Phase 5 complete** — Memory (ChromaDB), Daily Advisor, briefing API  
 ✅ **Phase 6 complete** — Strategy & Branding, narrative/competitor/calendar APIs  
 ✅ **Phase 7 complete** — Streamlit UI (chat, onboarding, module tabs, RTL, copy)  
-✅ **Phase 8 complete** — LangFuse, Docker Compose, CI, E2E smoke, OpenAPI docs
+✅ **Phase 8 complete** — LangFuse, Docker Compose, CI, E2E smoke, OpenAPI docs  
+✅ **Phase 9 complete** — LinkedIn OAuth, data import, Setup UI
 
 See [TASKS.md](TASKS.md) for the full phased roadmap (8 phases, 50+ tasks).
 

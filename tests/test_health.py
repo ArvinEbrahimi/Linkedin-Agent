@@ -20,3 +20,5 @@ async def test_health_endpoint(client):
     assert data["app"] == "LinkAid"
     assert "version" in data
     assert "env" in data
+    assert "groq_configured" in data
+    assert "linkedin_oauth_configured" in data

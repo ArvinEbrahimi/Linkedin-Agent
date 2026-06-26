@@ -8,6 +8,7 @@ from app import __version__
 from app.agents import (
     get_advisor_service,
     get_content_service,
+    get_linkedin_service,
     get_memory_service,
     get_networking_service,
     get_profile_service,
@@ -19,9 +20,11 @@ from app.api.routes.advisor import router as advisor_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.content import router as content_router
 from app.api.routes.health import router as health_router
+from app.api.routes.linkedin import router as linkedin_router
 from app.api.routes.memory import router as memory_router
 from app.api.routes.networking import router as networking_router
 from app.api.routes.profile import router as profile_router
+from app.api.routes.ready import router as ready_router
 from app.api.routes.strategy import router as strategy_router
 from app.config import get_settings
 from app.core.exceptions import LinkAidError
@@ -37,6 +40,9 @@ async def lifespan(app: FastAPI):
     setup_logging(settings)
     logger.info("Starting %s v%s [%s]", settings.app_name, settings.app_version, settings.env)
 
+    if not settings.groq_configured:
+        logger.warning("GROQ_API_KEY not set — /chat and AI endpoints will fail until configured")
+
     init_langfuse(settings)
     graph = init_agent(settings)
     app.state.graph = graph
@@ -46,6 +52,7 @@ async def lifespan(app: FastAPI):
     app.state.memory_service = get_memory_service()
     app.state.advisor_service = get_advisor_service()
     app.state.strategy_service = get_strategy_service()
+    app.state.linkedin_service = get_linkedin_service()
     logger.info("Agent graph ready")
 
     yield
@@ -67,6 +74,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(ready_router, prefix="/api/v1")
     app.include_router(chat_router, prefix="/api/v1")
     app.include_router(content_router, prefix="/api/v1")
     app.include_router(networking_router, prefix="/api/v1")
@@ -74,6 +82,7 @@ def create_app() -> FastAPI:
     app.include_router(memory_router, prefix="/api/v1")
     app.include_router(advisor_router, prefix="/api/v1")
     app.include_router(strategy_router, prefix="/api/v1")
+    app.include_router(linkedin_router, prefix="/api/v1")
 
     @app.exception_handler(LinkAidError)
     async def linkaid_error_handler(_request: Request, exc: LinkAidError) -> JSONResponse:
@@ -84,6 +93,8 @@ def create_app() -> FastAPI:
             status_code = 429
         elif exc.code == "configuration_error":
             status_code = 500
+        elif exc.code == "linkedin_oauth_error":
+            status_code = 400
 
         return JSONResponse(
             status_code=status_code,

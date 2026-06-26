@@ -3,6 +3,7 @@ from fastapi import Request
 from app.core.exceptions import ConfigurationError
 from app.services.advisor import AdvisorService
 from app.services.content import ContentService
+from app.services.linkedin import LinkedInService
 from app.services.memory_store import MemoryService
 from app.services.networking import NetworkingService
 from app.services.profile import ProfileService
@@ -55,4 +56,11 @@ def get_strategy_service(request: Request) -> StrategyService:
     service = getattr(request.app.state, "strategy_service", None)
     if service is None:
         raise ConfigurationError("Strategy service is not initialized")
+    return service
+
+
+def get_linkedin_service(request: Request) -> LinkedInService:
+    service = getattr(request.app.state, "linkedin_service", None)
+    if service is None:
+        raise ConfigurationError("LinkedIn service is not initialized")
     return service

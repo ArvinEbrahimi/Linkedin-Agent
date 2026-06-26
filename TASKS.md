@@ -176,7 +176,24 @@
 
 ---
 
-## Git Workflow (Per Task)
+## Phase 9 — LinkedIn Connect & Data Import
+
+**Branch:** `phase-9/linkedin-connect`  
+**PR title:** `feat: LinkedIn OAuth, data import, and setup UI`
+
+| ID | Task | Branch | Acceptance Criteria |
+|----|------|--------|---------------------|
+| 9.1 | Readiness API | `task/9.1-ready` | `/ready` shows Groq + LinkedIn config status |
+| 9.2 | LinkedIn OAuth | `task/9.2-oauth` | Sign In with LinkedIn, store sub + basic profile |
+| 9.3 | Data export import | `task/9.3-import` | ZIP upload → posts + headline in memory |
+| 9.4 | Setup UI tab | `task/9.4-setup-ui` | Connect, import, readiness in Streamlit |
+| 9.5 | Onboarding sync | `task/9.5-onboarding` | Pre-fill name/headline from LinkedIn |
+
+**Phase 9 done when:** User connects LinkedIn OR imports ZIP; advisor uses imported posts.
+
+**Status:** `[x]` complete — merged to `main`
+
+---
 
 ```bash
 git checkout main && git pull
