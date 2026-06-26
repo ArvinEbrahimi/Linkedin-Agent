@@ -37,7 +37,8 @@
 ✅ **Phase 3 complete** — Networking Engine, SWOT, outreach, rate limit  
 ✅ **Phase 4 complete** — Profile Optimization, headline/about/experience  
 ✅ **Phase 5 complete** — Memory (ChromaDB), Daily Advisor, briefing API  
-🚧 **Phase 6 next** — Strategy & Branding
+✅ **Phase 6 complete** — Strategy & Branding, narrative/competitor/calendar APIs  
+🚧 **Phase 7 next** — Streamlit UI
 
 See [TASKS.md](TASKS.md) for the full phased roadmap (8 phases, 50+ tasks).
 

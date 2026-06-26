@@ -11,6 +11,7 @@ from app.agents import (
     get_memory_service,
     get_networking_service,
     get_profile_service,
+    get_strategy_service,
     init_agent,
 )
 from app.api.routes.advisor import router as advisor_router
@@ -20,6 +21,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.memory import router as memory_router
 from app.api.routes.networking import router as networking_router
 from app.api.routes.profile import router as profile_router
+from app.api.routes.strategy import router as strategy_router
 from app.config import get_settings
 from app.core.exceptions import LinkAidError
 from app.core.logging import setup_logging
@@ -40,6 +42,7 @@ async def lifespan(app: FastAPI):
     app.state.profile_service = get_profile_service()
     app.state.memory_service = get_memory_service()
     app.state.advisor_service = get_advisor_service()
+    app.state.strategy_service = get_strategy_service()
     logger.info("Agent graph ready")
 
     yield
@@ -63,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(profile_router, prefix="/api/v1")
     app.include_router(memory_router, prefix="/api/v1")
     app.include_router(advisor_router, prefix="/api/v1")
+    app.include_router(strategy_router, prefix="/api/v1")
 
     @app.exception_handler(LinkAidError)
     async def linkaid_error_handler(_request: Request, exc: LinkAidError) -> JSONResponse:

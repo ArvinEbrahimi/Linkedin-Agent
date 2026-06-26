@@ -9,6 +9,8 @@ from app.services.memory_store import HashEmbeddingFunction, MemoryService
 from app.services.networking import NetworkingService
 from app.services.profile import ProfileService
 from app.services.rate_limit import OutreachRateLimiter
+from app.services.search import SearchService
+from app.services.strategy import StrategyService
 
 _graph: CompiledStateGraph | None = None
 _llm_service: LLMService | None = None
@@ -17,12 +19,15 @@ _networking_service: NetworkingService | None = None
 _profile_service: ProfileService | None = None
 _memory_service: MemoryService | None = None
 _advisor_service: AdvisorService | None = None
+_strategy_service: StrategyService | None = None
+_search_service: SearchService | None = None
 _rate_limiter: OutreachRateLimiter | None = None
 
 
 def init_agent(settings: Settings) -> CompiledStateGraph:
     global _graph, _llm_service, _content_service, _networking_service
-    global _profile_service, _memory_service, _advisor_service, _rate_limiter
+    global _profile_service, _memory_service, _advisor_service, _strategy_service
+    global _search_service, _rate_limiter
 
     _llm_service = LLMService(settings)
     _content_service = ContentService(_llm_service)
@@ -32,6 +37,8 @@ def init_agent(settings: Settings) -> CompiledStateGraph:
         embedding_function=HashEmbeddingFunction(),
     )
     _advisor_service = AdvisorService(_llm_service, _memory_service)
+    _search_service = SearchService(settings)
+    _strategy_service = StrategyService(_llm_service, _memory_service, _search_service)
     _rate_limiter = OutreachRateLimiter(
         settings.outreach_limit_db_path,
         daily_limit=settings.max_daily_outreach,
@@ -48,6 +55,7 @@ def init_agent(settings: Settings) -> CompiledStateGraph:
         _profile_service,
         _memory_service,
         _advisor_service,
+        _strategy_service,
         checkpointer,
     )
     return _graph
@@ -93,3 +101,15 @@ def get_advisor_service() -> AdvisorService:
     if _advisor_service is None:
         raise RuntimeError("Advisor service not initialized")
     return _advisor_service
+
+
+def get_strategy_service() -> StrategyService:
+    if _strategy_service is None:
+        raise RuntimeError("Strategy service not initialized")
+    return _strategy_service
+
+
+def get_search_service() -> SearchService:
+    if _search_service is None:
+        raise RuntimeError("Search service not initialized")
+    return _search_service

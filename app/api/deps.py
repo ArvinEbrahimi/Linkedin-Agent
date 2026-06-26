@@ -6,6 +6,7 @@ from app.services.content import ContentService
 from app.services.memory_store import MemoryService
 from app.services.networking import NetworkingService
 from app.services.profile import ProfileService
+from app.services.strategy import StrategyService
 
 
 def get_graph(request: Request):
@@ -47,4 +48,11 @@ def get_advisor_service(request: Request) -> AdvisorService:
     service = getattr(request.app.state, "advisor_service", None)
     if service is None:
         raise ConfigurationError("Advisor service is not initialized")
+    return service
+
+
+def get_strategy_service(request: Request) -> StrategyService:
+    service = getattr(request.app.state, "strategy_service", None)
+    if service is None:
+        raise ConfigurationError("Strategy service is not initialized")
     return service

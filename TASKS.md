@@ -132,6 +132,8 @@
 
 **Phase 6 done when:** Competitor names in → comparison table + differentiated content angles.
 
+**Status:** `[x]` complete — merged to `main`
+
 ---
 
 ## Phase 7 — Streamlit UI

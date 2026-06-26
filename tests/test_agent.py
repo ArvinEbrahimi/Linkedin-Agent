@@ -22,6 +22,8 @@ from app.services.memory_store import HashEmbeddingFunction, MemoryService
 from app.services.networking import NetworkingService
 from app.services.profile import ProfileService
 from app.services.rate_limit import OutreachRateLimiter
+from app.services.search import SearchService
+from app.services.strategy import StrategyService
 
 
 def _sample_response() -> LinkAidResponse:
@@ -76,6 +78,9 @@ def mock_llm_service():
 
     async def structured_invoke(messages, schema):
         if schema is IntentClassification:
+            text = str(messages[-1].content).lower() if messages else ""
+            if "competitor" in text or "calendar" in text or "narrative" in text:
+                return IntentClassification(intent="strategy", needs_clarification=False)
             return IntentClassification(intent="content", needs_clarification=False)
         if schema is LinkAidResponse:
             return _sample_response()
@@ -83,6 +88,110 @@ def mock_llm_service():
             return _sample_content_output()
         if schema is ProfileAnalysisLLMOutput:
             return _sample_networking_output()
+        from app.models.networking import SWOTAnalysis
+        from app.models.strategy import (
+            CalendarLLMOutput,
+            CalendarSlot,
+            CompetitorComparisonRow,
+            CompetitorLLMOutput,
+            CompetitorProfile,
+            NarrativeLLMOutput,
+            PersonalNarrative,
+        )
+
+        if schema is NarrativeLLMOutput:
+            alt = AlternativeOption(title="A", content="B", comparison="C")
+            return NarrativeLLMOutput(
+                understanding="Narrative request.",
+                narrative=PersonalNarrative(
+                    positioning_statement="LLM engineer for fintech teams.",
+                    elevator_pitch="I build production LLM systems for regulated industries.",
+                    unique_value_proposition="Compliance + speed.",
+                    target_audience_summary="Fintech CTOs.",
+                    tone_keywords=["practical", "warm"],
+                ),
+                alternative_angles=[alt, alt],
+                strategic_reasoning="Niche positioning wins.",
+                execution_tips="Update About section.",
+                follow_up_question="Headline variants?",
+            )
+        if schema is CompetitorLLMOutput:
+            alt = AlternativeOption(title="A", content="B", comparison="C")
+            return CompetitorLLMOutput(
+                understanding="Competitor request.",
+                competitors=[
+                    CompetitorProfile(
+                        name="Peer",
+                        positioning="AI tips",
+                        content_themes=["tutorials"],
+                        strengths=["Audience"],
+                        weaknesses=["Depth"],
+                    )
+                ],
+                comparison_table=[
+                    CompetitorComparisonRow(
+                        competitor="Peer",
+                        their_angle="Beginner tips",
+                        your_differentiation="Production depth",
+                        content_opportunity="Case studies",
+                    )
+                ],
+                differentiated_angles=["Production LLM", "Compliance angle"],
+                your_swot=SWOTAnalysis(
+                    strengths=["Depth"],
+                    weaknesses=["Reach"],
+                    opportunities=["Niche"],
+                    threats=["Noise"],
+                ),
+                alternative_angles=[alt, alt],
+                strategic_reasoning="Differentiate on depth.",
+                execution_tips="Weekly case study.",
+                follow_up_question="More competitors?",
+            )
+        if schema is CalendarLLMOutput:
+            alt = AlternativeOption(title="A", content="B", comparison="C")
+            return CalendarLLMOutput(
+                understanding="Calendar request.",
+                monthly_theme="LLM production lessons",
+                slots=[
+                    CalendarSlot(
+                        week=1,
+                        day="Tuesday",
+                        post_type="text",
+                        theme="Eval pitfalls",
+                        hook_idea="Your demo scores 95% — users still complain.",
+                        cta_hint="Comment your surprise",
+                    ),
+                    CalendarSlot(
+                        week=1,
+                        day="Thursday",
+                        post_type="carousel",
+                        theme="Compliance",
+                        hook_idea="5 legal questions before ship.",
+                        cta_hint="Save this",
+                    ),
+                    CalendarSlot(
+                        week=2,
+                        day="Tuesday",
+                        post_type="poll",
+                        theme="Team ownership",
+                        hook_idea="Who owns prompts?",
+                        cta_hint="Vote",
+                    ),
+                    CalendarSlot(
+                        week=2,
+                        day="Friday",
+                        post_type="document",
+                        theme="Architecture",
+                        hook_idea="Cut latency 40%.",
+                        cta_hint="Save diagram",
+                    ),
+                ],
+                alternative_angles=[alt, alt],
+                strategic_reasoning="Mixed formats.",
+                execution_tips="Batch on weekends.",
+                follow_up_question="Draft week 1?",
+            )
         return schema.model_validate({})
 
     service.structured_invoke = AsyncMock(side_effect=structured_invoke)
@@ -155,6 +264,13 @@ def advisor_service(mock_llm_service, memory_service):
 
 
 @pytest.fixture
+def strategy_service(mock_llm_service, memory_service):
+    search = MagicMock(spec=SearchService)
+    search.search_competitors = AsyncMock(return_value=([], "none"))
+    return StrategyService(mock_llm_service, memory_service, search)
+
+
+@pytest.fixture
 def graph(
     mock_llm_service,
     content_service,
@@ -162,6 +278,7 @@ def graph(
     profile_service,
     memory_service,
     advisor_service,
+    strategy_service,
 ):
     return build_graph(
         mock_llm_service,
@@ -170,6 +287,7 @@ def graph(
         profile_service,
         memory_service,
         advisor_service,
+        strategy_service,
         MemorySaver(),
     )
 
@@ -217,6 +335,29 @@ async def test_format_response_clarification():
 
 
 @pytest.mark.asyncio
+async def test_graph_routes_strategy_intent_to_strategy_agent(graph):
+    result = await graph.ainvoke(
+        {
+            "messages": [HumanMessage(content="Help me build my personal narrative on LinkedIn")],
+            "user_id": "test",
+            "thread_id": "test-strategy",
+            "intent": "general",
+            "user_context": {},
+            "draft_response": None,
+            "needs_clarification": False,
+            "clarification_question": None,
+            "metadata": {},
+        },
+        config={"configurable": {"thread_id": "test-strategy"}},
+    )
+
+    assert result["intent"] == "strategy"
+    assert result.get("metadata", {}).get("strategy_mode") == "narrative"
+    draft = LinkAidResponse.model_validate(result["draft_response"])
+    assert "Positioning" in draft.main_recommendation
+
+
+@pytest.mark.asyncio
 async def test_chat_endpoint_with_mock_graph(
     mock_llm_service,
     content_service,
@@ -224,6 +365,7 @@ async def test_chat_endpoint_with_mock_graph(
     profile_service,
     memory_service,
     advisor_service,
+    strategy_service,
     graph,
 ):
     app = create_app()
@@ -233,6 +375,7 @@ async def test_chat_endpoint_with_mock_graph(
     app.state.profile_service = profile_service
     app.state.memory_service = memory_service
     app.state.advisor_service = advisor_service
+    app.state.strategy_service = strategy_service
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -270,14 +413,17 @@ async def test_chat_endpoint_missing_api_key_returns_error(tmp_path):
         embedding_function=HashEmbeddingFunction(),
     )
     advisor = AdvisorService(service, memory)
+    search = SearchService(settings)
+    strategy = StrategyService(service, memory, search)
     app.state.graph = build_graph(
-        service, content, networking, profile, memory, advisor, MemorySaver()
+        service, content, networking, profile, memory, advisor, strategy, MemorySaver()
     )
     app.state.content_service = content
     app.state.networking_service = networking
     app.state.profile_service = profile
     app.state.memory_service = memory
     app.state.advisor_service = advisor
+    app.state.strategy_service = strategy
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

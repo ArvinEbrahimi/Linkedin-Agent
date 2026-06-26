@@ -12,6 +12,7 @@ from app.agents.nodes.memory import classify_intent, load_memory, save_memory
 from app.agents.nodes.networking import networking_agent
 from app.agents.nodes.profile import profile_agent
 from app.agents.nodes.respond import format_response, generate_response
+from app.agents.nodes.strategy import strategy_agent
 from app.agents.state import LinkAidState
 from app.config import Settings
 from app.services.advisor import AdvisorService
@@ -20,6 +21,7 @@ from app.services.llm import LLMService
 from app.services.memory_store import MemoryService
 from app.services.networking import NetworkingService
 from app.services.profile import ProfileService
+from app.services.strategy import StrategyService
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,8 @@ def _route_after_classify(state: LinkAidState) -> str:
         return "profile_agent"
     if intent == "advisor":
         return "advisor_agent"
+    if intent == "strategy":
+        return "strategy_agent"
     return "generate_response"
 
 
@@ -56,6 +60,7 @@ def build_graph(
     profile_service: ProfileService,
     memory_service: MemoryService,
     advisor_service: AdvisorService,
+    strategy_service: StrategyService,
     checkpointer: SqliteSaver | None = None,
     *,
     hitl_interrupt: bool = False,
@@ -84,6 +89,10 @@ def build_graph(
         "advisor_agent",
         partial(advisor_agent, llm_service=llm_service, advisor_service=advisor_service),
     )
+    graph.add_node(
+        "strategy_agent",
+        partial(strategy_agent, llm_service=llm_service, strategy_service=strategy_service),
+    )
     graph.add_node("generate_response", partial(generate_response, llm_service=llm_service))
     graph.add_node("format_response", format_response)
     graph.add_node(
@@ -102,6 +111,7 @@ def build_graph(
             "networking_agent": "networking_agent",
             "profile_agent": "profile_agent",
             "advisor_agent": "advisor_agent",
+            "strategy_agent": "strategy_agent",
             "generate_response": "generate_response",
         },
     )
@@ -109,6 +119,7 @@ def build_graph(
     graph.add_edge("networking_agent", "format_response")
     graph.add_edge("profile_agent", "format_response")
     graph.add_edge("advisor_agent", "format_response")
+    graph.add_edge("strategy_agent", "format_response")
     graph.add_edge("generate_response", "format_response")
     graph.add_edge("format_response", "save_memory")
     graph.add_edge("save_memory", END)
