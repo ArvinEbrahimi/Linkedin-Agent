@@ -152,6 +152,8 @@
 
 **Phase 7 done when:** Non-technical user can complete onboarding and generate a post via UI.
 
+**Status:** `[x]` complete — merged to `main`
+
 ---
 
 ## Phase 8 — Observability & Deployment

@@ -38,7 +38,8 @@
 ✅ **Phase 4 complete** — Profile Optimization, headline/about/experience  
 ✅ **Phase 5 complete** — Memory (ChromaDB), Daily Advisor, briefing API  
 ✅ **Phase 6 complete** — Strategy & Branding, narrative/competitor/calendar APIs  
-🚧 **Phase 7 next** — Streamlit UI
+✅ **Phase 7 complete** — Streamlit UI (chat, onboarding, module tabs, RTL, copy)  
+🚧 **Phase 8 next** — Observability & Deployment
 
 See [TASKS.md](TASKS.md) for the full phased roadmap (8 phases, 50+ tasks).
 
@@ -60,7 +61,8 @@ pip install -e ".[dev]"
 uvicorn app.main:app --reload
 
 # Run UI (Phase 7+)
-streamlit run app/ui/streamlit_app.py
+make run-ui
+# or: streamlit run app/ui/streamlit_app.py
 ```
 
 ## Development Workflow
