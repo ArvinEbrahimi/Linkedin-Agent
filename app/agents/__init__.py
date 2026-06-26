@@ -26,8 +26,8 @@ _linkedin_service: LinkedInService | None = None
 _rate_limiter: OutreachRateLimiter | None = None
 
 
-def init_agent(settings: Settings) -> CompiledStateGraph:
-    global _graph, _llm_service, _content_service, _networking_service
+def init_services(settings: Settings) -> None:
+    global _llm_service, _content_service, _networking_service
     global _profile_service, _memory_service, _advisor_service, _strategy_service
     global _search_service, _linkedin_service, _rate_limiter
 
@@ -48,9 +48,9 @@ def init_agent(settings: Settings) -> CompiledStateGraph:
     )
     _networking_service = NetworkingService(_llm_service, _rate_limiter)
 
-    from app.agents.graph import build_checkpointer
 
-    checkpointer = build_checkpointer(settings)
+def build_agent_graph(settings: Settings, checkpointer) -> CompiledStateGraph:
+    global _graph
     _graph = build_graph(
         _llm_service,
         _content_service,
@@ -62,6 +62,12 @@ def init_agent(settings: Settings) -> CompiledStateGraph:
         checkpointer,
     )
     return _graph
+
+
+def init_agent(settings: Settings, checkpointer) -> CompiledStateGraph:
+    """Initialize services and compile graph with the given checkpointer."""
+    init_services(settings)
+    return build_agent_graph(settings, checkpointer)
 
 
 def get_compiled_graph() -> CompiledStateGraph:

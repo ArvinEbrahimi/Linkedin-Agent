@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from app import __version__
 from app.agents import (
@@ -15,6 +16,7 @@ from app.agents import (
     get_strategy_service,
     init_agent,
 )
+from app.agents.graph import checkpoint_db_path
 from app.api.openapi import API_DESCRIPTION, OPENAPI_TAGS
 from app.api.routes.advisor import router as advisor_router
 from app.api.routes.chat import router as chat_router
@@ -44,18 +46,22 @@ async def lifespan(app: FastAPI):
         logger.warning("GROQ_API_KEY not set — /chat and AI endpoints will fail until configured")
 
     init_langfuse(settings)
-    graph = init_agent(settings)
-    app.state.graph = graph
-    app.state.content_service = get_content_service()
-    app.state.networking_service = get_networking_service()
-    app.state.profile_service = get_profile_service()
-    app.state.memory_service = get_memory_service()
-    app.state.advisor_service = get_advisor_service()
-    app.state.strategy_service = get_strategy_service()
-    app.state.linkedin_service = get_linkedin_service()
-    logger.info("Agent graph ready")
 
-    yield
+    db_path = checkpoint_db_path(settings.checkpoint_db_path)
+    async with AsyncSqliteSaver.from_conn_string(db_path) as checkpointer:
+        graph = init_agent(settings, checkpointer)
+        app.state.graph = graph
+        app.state.content_service = get_content_service()
+        app.state.networking_service = get_networking_service()
+        app.state.profile_service = get_profile_service()
+        app.state.memory_service = get_memory_service()
+        app.state.advisor_service = get_advisor_service()
+        app.state.strategy_service = get_strategy_service()
+        app.state.linkedin_service = get_linkedin_service()
+        logger.info("Agent graph ready (async checkpointer)")
+
+        yield
+
     shutdown_langfuse()
     logger.info("Shutting down %s", settings.app_name)
 

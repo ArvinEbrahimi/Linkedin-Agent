@@ -1,9 +1,8 @@
 import logging
-import sqlite3
 from functools import partial
 from pathlib import Path
 
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 
 from app.agents.nodes.advisor import advisor_agent
@@ -27,9 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 def _route_after_classify(state: LinkAidState) -> str:
-    if state.get("needs_clarification"):
-        return "format_response"
     intent = state.get("intent", "general")
+    # Only short-circuit vague *general* messages — never block specialist agents.
+    if state.get("needs_clarification") and intent == "general":
+        return "generate_response"
     if intent == "content":
         return "content_agent"
     if intent == "networking":
@@ -43,14 +43,13 @@ def _route_after_classify(state: LinkAidState) -> str:
     return "generate_response"
 
 
+def checkpoint_db_path(db_path: str) -> str:
+    _ensure_checkpoint_dir(db_path)
+    return str(Path(db_path).resolve())
+
+
 def _ensure_checkpoint_dir(db_path: str) -> None:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-
-
-def build_checkpointer(settings: Settings) -> SqliteSaver:
-    _ensure_checkpoint_dir(settings.checkpoint_db_path)
-    conn = sqlite3.connect(settings.checkpoint_db_path, check_same_thread=False)
-    return SqliteSaver(conn)
 
 
 def build_graph(
@@ -61,7 +60,7 @@ def build_graph(
     memory_service: MemoryService,
     advisor_service: AdvisorService,
     strategy_service: StrategyService,
-    checkpointer: SqliteSaver | None = None,
+    checkpointer: BaseCheckpointSaver | None = None,
     *,
     hitl_interrupt: bool = False,
 ):
