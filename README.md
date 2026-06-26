@@ -36,7 +36,8 @@
 ✅ **Phase 2 complete** — Content Intelligence, `/api/v1/content/post` & `/campaign`  
 ✅ **Phase 3 complete** — Networking Engine, SWOT, outreach, rate limit  
 ✅ **Phase 4 complete** — Profile Optimization, headline/about/experience  
-🚧 **Phase 5 next** — Memory & Daily Advisor
+✅ **Phase 5 complete** — Memory (ChromaDB), Daily Advisor, briefing API  
+🚧 **Phase 6 next** — Strategy & Branding
 
 See [TASKS.md](TASKS.md) for the full phased roadmap (8 phases, 50+ tasks).
 

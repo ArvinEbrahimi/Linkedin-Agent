@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock
 
+import chromadb
 import pytest
 from httpx import ASGITransport, AsyncClient
 from langchain_core.messages import HumanMessage
@@ -9,12 +10,15 @@ from app.agents.graph import build_graph
 from app.agents.models import IntentClassification
 from app.agents.nodes.respond import format_response
 from app.agents.state import LinkAidState
+from app.config import Settings
 from app.main import create_app
 from app.models.content import ContentPostLLMOutput, HookVariant
 from app.models.networking import ProfileAnalysisLLMOutput
 from app.models.responses import AlternativeOption, LinkAidResponse
+from app.services.advisor import AdvisorService
 from app.services.content import ContentService
 from app.services.llm import LLMService
+from app.services.memory_store import HashEmbeddingFunction, MemoryService
 from app.services.networking import NetworkingService
 from app.services.profile import ProfileService
 from app.services.rate_limit import OutreachRateLimiter
@@ -132,9 +136,41 @@ def profile_service(mock_llm_service):
 
 
 @pytest.fixture
-def graph(mock_llm_service, content_service, networking_service, profile_service):
+def memory_service(tmp_path):
+    settings = Settings(
+        groq_api_key="test",
+        database_url=f"sqlite:///{(tmp_path / 'agent_test.db').as_posix()}",
+        chroma_persist_dir=str(tmp_path / "chroma"),
+    )
+    return MemoryService(
+        settings,
+        chroma_client=chromadb.EphemeralClient(),
+        embedding_function=HashEmbeddingFunction(),
+    )
+
+
+@pytest.fixture
+def advisor_service(mock_llm_service, memory_service):
+    return AdvisorService(mock_llm_service, memory_service)
+
+
+@pytest.fixture
+def graph(
+    mock_llm_service,
+    content_service,
+    networking_service,
+    profile_service,
+    memory_service,
+    advisor_service,
+):
     return build_graph(
-        mock_llm_service, content_service, networking_service, profile_service, MemorySaver()
+        mock_llm_service,
+        content_service,
+        networking_service,
+        profile_service,
+        memory_service,
+        advisor_service,
+        MemorySaver(),
     )
 
 
@@ -182,13 +218,21 @@ async def test_format_response_clarification():
 
 @pytest.mark.asyncio
 async def test_chat_endpoint_with_mock_graph(
-    mock_llm_service, content_service, networking_service, profile_service, graph
+    mock_llm_service,
+    content_service,
+    networking_service,
+    profile_service,
+    memory_service,
+    advisor_service,
+    graph,
 ):
     app = create_app()
     app.state.graph = graph
     app.state.content_service = content_service
     app.state.networking_service = networking_service
     app.state.profile_service = profile_service
+    app.state.memory_service = memory_service
+    app.state.advisor_service = advisor_service
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -210,16 +254,30 @@ async def test_chat_endpoint_missing_api_key_returns_error(tmp_path):
     from app.agents.graph import build_graph
     from app.config import Settings
 
-    settings = Settings(groq_api_key=None)
+    settings = Settings(
+        groq_api_key=None,
+        database_url=f"sqlite:///{(tmp_path / 'missing_key.db').as_posix()}",
+        chroma_persist_dir=str(tmp_path / "chroma"),
+    )
     service = LLMService(settings)
     content = ContentService(service)
     limiter = OutreachRateLimiter(str(tmp_path / "outreach.db"), daily_limit=20)
     networking = NetworkingService(service, limiter)
     profile = ProfileService(service)
-    app.state.graph = build_graph(service, content, networking, profile, MemorySaver())
+    memory = MemoryService(
+        settings,
+        chroma_client=chromadb.EphemeralClient(),
+        embedding_function=HashEmbeddingFunction(),
+    )
+    advisor = AdvisorService(service, memory)
+    app.state.graph = build_graph(
+        service, content, networking, profile, memory, advisor, MemorySaver()
+    )
     app.state.content_service = content
     app.state.networking_service = networking
     app.state.profile_service = profile
+    app.state.memory_service = memory
+    app.state.advisor_service = advisor
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
