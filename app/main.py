@@ -14,6 +14,7 @@ from app.agents import (
     get_strategy_service,
     init_agent,
 )
+from app.api.openapi import API_DESCRIPTION, OPENAPI_TAGS
 from app.api.routes.advisor import router as advisor_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.content import router as content_router
@@ -25,6 +26,7 @@ from app.api.routes.strategy import router as strategy_router
 from app.config import get_settings
 from app.core.exceptions import LinkAidError
 from app.core.logging import setup_logging
+from app.core.observability import init_langfuse, shutdown_langfuse
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,7 @@ async def lifespan(app: FastAPI):
     setup_logging(settings)
     logger.info("Starting %s v%s [%s]", settings.app_name, settings.app_version, settings.env)
 
+    init_langfuse(settings)
     graph = init_agent(settings)
     app.state.graph = graph
     app.state.content_service = get_content_service()
@@ -46,6 +49,7 @@ async def lifespan(app: FastAPI):
     logger.info("Agent graph ready")
 
     yield
+    shutdown_langfuse()
     logger.info("Shutting down %s", settings.app_name)
 
 
@@ -55,8 +59,11 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         version=__version__,
-        description="Personal AI assistant for LinkedIn personal branding. Suggest-only.",
+        description=API_DESCRIPTION,
         lifespan=lifespan,
+        openapi_tags=OPENAPI_TAGS,
+        contact={"name": "LinkAid", "url": "https://github.com/ArvinEbrahimi/Linkedin-Agent"},
+        license_info={"name": "Proprietary"},
     )
 
     app.include_router(health_router, prefix="/api/v1")

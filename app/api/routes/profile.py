@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 
-@router.post("/optimize", response_model=ProfileOptimizeResponse)
+@router.post(
+    "/optimize",
+    response_model=ProfileOptimizeResponse,
+    summary="Optimize a profile section",
+    description="Rewrite headline (3 variants ≤220 chars), about, experience, featured, or skills.",
+)
 async def optimize_profile(
     request: ProfileOptimizeRequest,
     profile_service: ProfileService = Depends(get_profile_service),

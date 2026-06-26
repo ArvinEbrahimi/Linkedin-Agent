@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     def is_development(self) -> bool:
         return self.env.lower() in ("development", "dev", "local")
 
+    @property
+    def langfuse_enabled(self) -> bool:
+        return bool(self.langfuse_public_key and self.langfuse_secret_key)
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -39,7 +39,7 @@
 ✅ **Phase 5 complete** — Memory (ChromaDB), Daily Advisor, briefing API  
 ✅ **Phase 6 complete** — Strategy & Branding, narrative/competitor/calendar APIs  
 ✅ **Phase 7 complete** — Streamlit UI (chat, onboarding, module tabs, RTL, copy)  
-🚧 **Phase 8 next** — Observability & Deployment
+✅ **Phase 8 complete** — LangFuse, Docker Compose, CI, E2E smoke, OpenAPI docs
 
 See [TASKS.md](TASKS.md) for the full phased roadmap (8 phases, 50+ tasks).
 
@@ -62,7 +62,16 @@ uvicorn app.main:app --reload
 
 # Run UI (Phase 7+)
 make run-ui
-# or: streamlit run app/ui/streamlit_app.py
+
+# Docker — API + UI (Phase 8+)
+cp .env.example .env   # add GROQ_API_KEY
+make docker-up
+# API → http://localhost:8000  |  UI → http://localhost:8501
+# Docs → http://localhost:8000/docs
+
+# E2E smoke (API must be running)
+make e2e
+make e2e-chat   # also tests /chat (needs GROQ_API_KEY)
 ```
 
 ## Development Workflow

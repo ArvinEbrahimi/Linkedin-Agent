@@ -6,7 +6,15 @@ from app.models.responses import HealthResponse
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get(
+    "/health",
+    response_model=HealthResponse,
+    summary="Health check",
+    description=(
+        "Returns service name, version, and environment. "
+        "Use for load balancers and Docker healthchecks."
+    ),
+)
 async def health_check() -> HealthResponse:
     settings = get_settings()
     return HealthResponse(

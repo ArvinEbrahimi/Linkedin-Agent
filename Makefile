@@ -22,6 +22,18 @@ run:
 run-ui:
 	streamlit run app/ui/streamlit_app.py --server.port 8501
 
+docker-up:
+	docker compose up --build
+
+docker-down:
+	docker compose down
+
+e2e:
+	python scripts/e2e_smoke.py
+
+e2e-chat:
+	python scripts/e2e_smoke.py --chat
+
 clean:
 	rm -rf .pytest_cache .ruff_cache dist build *.egg-info
 	find . -type d -name __pycache__ -exec rm -rf {} +

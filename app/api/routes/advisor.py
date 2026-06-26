@@ -16,7 +16,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/advisor", tags=["advisor"])
 
 
-@router.post("/briefing", response_model=AdvisorResponse)
+@router.post(
+    "/briefing",
+    response_model=AdvisorResponse,
+    summary="Morning briefing",
+    description="Daily LinkedIn focus plan based on stored goals and niche.",
+)
 async def morning_briefing(
     request: BriefingRequest,
     advisor_service: AdvisorService = Depends(get_advisor_service),
@@ -24,7 +29,11 @@ async def morning_briefing(
     return await advisor_service.morning_briefing(request)
 
 
-@router.post("/post-analysis", response_model=AdvisorResponse)
+@router.post(
+    "/post-analysis",
+    response_model=AdvisorResponse,
+    summary="Analyze post performance",
+)
 async def post_analysis(
     request: PostAnalysisRequest,
     advisor_service: AdvisorService = Depends(get_advisor_service),
@@ -32,7 +41,12 @@ async def post_analysis(
     return await advisor_service.analyze_post(request)
 
 
-@router.post("/outreach", response_model=AdvisorResponse)
+@router.post(
+    "/outreach",
+    response_model=AdvisorResponse,
+    summary="Prioritized outreach list",
+    description="Up to 20 ranked outreach suggestions for the day.",
+)
 async def outreach_suggestions(
     request: OutreachListRequest,
     advisor_service: AdvisorService = Depends(get_advisor_service),

@@ -172,6 +172,8 @@
 
 **Phase 8 done when:** `docker compose up` runs locally; CI green on PR.
 
+**Status:** `[x]` complete — merged to `main`
+
 ---
 
 ## Git Workflow (Per Task)

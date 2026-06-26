@@ -11,6 +11,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 
 from app.config import Settings
 from app.core.exceptions import ConfigurationError
+from app.core.observability import build_run_config
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,8 @@ class LLMService:
     ) -> BaseModel:
         start = time.perf_counter()
         structured_llm = self.chat_model.with_structured_output(schema)
-        result = await structured_llm.ainvoke(list(messages))
+        run_config = build_run_config(self.settings)
+        result = await structured_llm.ainvoke(list(messages), config=run_config)
         if not isinstance(result, schema):
             result = schema.model_validate(result)
 

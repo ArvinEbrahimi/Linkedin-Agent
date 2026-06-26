@@ -16,7 +16,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
 
 
-@router.get("/profile/{user_id}", response_model=MemoryProfileResponse)
+@router.get(
+    "/profile/{user_id}",
+    response_model=MemoryProfileResponse,
+    summary="Get stored user profile",
+)
 async def get_profile(
     user_id: str,
     memory_service: MemoryService = Depends(get_memory_service),
@@ -25,7 +29,12 @@ async def get_profile(
     return MemoryProfileResponse(user_id=user_id, profile=profile)
 
 
-@router.put("/profile/{user_id}", response_model=MemoryProfileResponse)
+@router.put(
+    "/profile/{user_id}",
+    response_model=MemoryProfileResponse,
+    summary="Save user profile",
+    description="Persist niche, goals, competitors, and preferences for cross-session memory.",
+)
 async def save_profile(
     user_id: str,
     body: ProfileMemoryRequest,
@@ -35,7 +44,7 @@ async def save_profile(
     return MemoryProfileResponse(user_id=user_id, profile=profile)
 
 
-@router.get("/posts/{user_id}", response_model=MemoryPostsResponse)
+@router.get("/posts/{user_id}", response_model=MemoryPostsResponse, summary="List saved posts")
 async def list_posts(
     user_id: str,
     memory_service: MemoryService = Depends(get_memory_service),
@@ -44,7 +53,7 @@ async def list_posts(
     return MemoryPostsResponse(user_id=user_id, posts=posts)
 
 
-@router.post("/posts/{user_id}", response_model=MemoryPostsResponse)
+@router.post("/posts/{user_id}", response_model=MemoryPostsResponse, summary="Add a post record")
 async def add_post(
     user_id: str,
     body: PostMemoryRequest,

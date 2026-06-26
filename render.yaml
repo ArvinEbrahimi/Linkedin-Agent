@@ -1,0 +1,33 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: linkaid-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENV
+        value: production
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: CHECKPOINT_DB_PATH
+        value: /app/data/checkpoints.db
+      - key: OUTREACH_LIMIT_DB_PATH
+        value: /app/data/outreach_limits.db
+      - key: DATABASE_URL
+        value: sqlite:////app/data/linkaid.db
+      - key: CHROMA_PERSIST_DIR
+        value: /app/data/chroma
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+    disk:
+      name: linkaid-data
+      mountPath: /app/data
+      sizeGB: 1

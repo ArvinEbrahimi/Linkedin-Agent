@@ -26,6 +26,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+observability = [
+    "langfuse>=2.0.0",
+]
 ui = [
     "streamlit>=1.32.0",
     "httpx>=0.28.0",
