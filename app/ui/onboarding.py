@@ -6,6 +6,7 @@ import streamlit as st
 
 from app.ui.api_client import LinkAidAPIError, LinkAidClient
 from app.ui.components import render_api_error
+from app.ui.session_helpers import defer_language_mix
 
 
 def _profile_needs_onboarding(client: LinkAidClient, user_id: str) -> bool:
@@ -16,8 +17,10 @@ def _profile_needs_onboarding(client: LinkAidClient, user_id: str) -> bool:
         profile = data.get("profile")
         if profile and profile.get("niche"):
             st.session_state.onboarding_complete = True
-            if profile.get("language_mix"):
-                st.session_state.language_mix = profile["language_mix"]
+            saved_mix = profile.get("language_mix")
+            if saved_mix and saved_mix != st.session_state.get("language_mix"):
+                defer_language_mix(saved_mix)
+                st.rerun()
             return False
         return True
     except LinkAidAPIError:
@@ -28,6 +31,8 @@ def _prefill_from_linkedin(client: LinkAidClient, user_id: str) -> None:
     if st.session_state.get("ob_prefilled"):
         return
     try:
+        if not st.session_state.get("ob_name") and st.session_state.get("display_name"):
+            st.session_state.ob_name = st.session_state.display_name
         status = client.linkedin_status(user_id)
         if status.get("connected") and status.get("name"):
             st.session_state.ob_name = status["name"]
@@ -100,7 +105,14 @@ def render_onboarding(client: LinkAidClient, user_id: str) -> bool:
                     st.session_state.get("ob_tone", "professional")
                 ),
             )
-            language_mix = st.selectbox("Language mix", ["fa-en", "en"])
+            language_mix = st.selectbox(
+                "Language mix",
+                ["fa-en", "en"],
+                index=["fa-en", "en"].index(
+                    st.session_state.get("ob_language", "fa-en")
+                ),
+                key="ob_language_select",
+            )
             posting_frequency = st.selectbox(
                 "Posting frequency",
                 ["1-2/week", "2-5/week", "5+/week"],
@@ -179,7 +191,7 @@ def _save_onboarding_profile(client: LinkAidClient, user_id: str) -> None:
     try:
         client.save_profile(user_id, profile)
         st.session_state.onboarding_complete = True
-        st.session_state.language_mix = profile["language_mix"]
+        defer_language_mix(profile["language_mix"])
         st.success("Profile saved! پروفایل ذخیره شد — let's build your brand.")
         st.session_state.onboarding_step = 0
         st.rerun()
