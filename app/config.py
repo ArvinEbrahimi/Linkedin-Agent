@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     groq_api_key: str | None = Field(default=None, alias="GROQ_API_KEY")
     groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
     checkpoint_db_path: str = Field(default="./data/checkpoints.db", alias="CHECKPOINT_DB_PATH")
+    outreach_limit_db_path: str = Field(
+        default="./data/outreach_limits.db", alias="OUTREACH_LIMIT_DB_PATH"
+    )
+    max_daily_outreach: int = Field(default=20, alias="MAX_DAILY_OUTREACH")
     tavily_api_key: str | None = Field(default=None, alias="TAVILY_API_KEY")
 
     langfuse_public_key: str | None = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")

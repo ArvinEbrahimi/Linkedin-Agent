@@ -11,9 +11,12 @@ from app.agents.nodes.respond import format_response
 from app.agents.state import LinkAidState
 from app.main import create_app
 from app.models.content import ContentPostLLMOutput, HookVariant
+from app.models.networking import ProfileAnalysisLLMOutput
 from app.models.responses import AlternativeOption, LinkAidResponse
 from app.services.content import ContentService
 from app.services.llm import LLMService
+from app.services.networking import NetworkingService
+from app.services.rate_limit import OutreachRateLimiter
 
 
 def _sample_response() -> LinkAidResponse:
@@ -73,11 +76,38 @@ def mock_llm_service():
             return _sample_response()
         if schema is ContentPostLLMOutput:
             return _sample_content_output()
+        if schema is ProfileAnalysisLLMOutput:
+            return _sample_networking_output()
         return schema.model_validate({})
 
     service.structured_invoke = AsyncMock(side_effect=structured_invoke)
     service.build_system_prompt = MagicMock(return_value="system prompt")
     return service
+
+
+def _sample_networking_output() -> ProfileAnalysisLLMOutput:
+    from app.models.networking import SWOTAnalysis
+
+    swot = SWOTAnalysis(
+        strengths=["Active poster"],
+        weaknesses=["Busy schedule"],
+        opportunities=["Shared tech stack"],
+        threats=["Generic approach"],
+    )
+    alt = AlternativeOption(title="A", content="B", comparison="C")
+    return ProfileAnalysisLLMOutput(
+        understanding="Networking request.",
+        summary="Senior engineer at a tech company.",
+        swot=swot,
+        icebreakers=["ice1", "ice2", "ice3"],
+        connection_request=(
+            "Hi! Loved your post on Python — would love to connect and exchange ideas."
+        ),
+        alternative_angles=[alt, alt],
+        strategic_reasoning="Personalized wins.",
+        execution_tips="Comment first.",
+        follow_up_question="InMail too?",
+    )
 
 
 @pytest.fixture
@@ -86,8 +116,18 @@ def content_service(mock_llm_service):
 
 
 @pytest.fixture
-def graph(mock_llm_service, content_service):
-    return build_graph(mock_llm_service, content_service, MemorySaver())
+def rate_limiter(tmp_path):
+    return OutreachRateLimiter(str(tmp_path / "outreach.db"), daily_limit=20)
+
+
+@pytest.fixture
+def networking_service(mock_llm_service, rate_limiter):
+    return NetworkingService(mock_llm_service, rate_limiter)
+
+
+@pytest.fixture
+def graph(mock_llm_service, content_service, networking_service):
+    return build_graph(mock_llm_service, content_service, networking_service, MemorySaver())
 
 
 @pytest.mark.asyncio
@@ -133,10 +173,13 @@ async def test_format_response_clarification():
 
 
 @pytest.mark.asyncio
-async def test_chat_endpoint_with_mock_graph(mock_llm_service, content_service, graph):
+async def test_chat_endpoint_with_mock_graph(
+    mock_llm_service, content_service, networking_service, graph
+):
     app = create_app()
     app.state.graph = graph
     app.state.content_service = content_service
+    app.state.networking_service = networking_service
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -161,8 +204,11 @@ async def test_chat_endpoint_missing_api_key_returns_error():
     settings = Settings(groq_api_key=None)
     service = LLMService(settings)
     content = ContentService(service)
-    app.state.graph = build_graph(service, content, MemorySaver())
+    limiter = OutreachRateLimiter(":memory:", daily_limit=20)
+    networking = NetworkingService(service, limiter)
+    app.state.graph = build_graph(service, content, networking, MemorySaver())
     app.state.content_service = content
+    app.state.networking_service = networking
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

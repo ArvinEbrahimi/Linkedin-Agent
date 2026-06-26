@@ -8,11 +8,13 @@ from langgraph.graph import END, START, StateGraph
 
 from app.agents.nodes.content import content_agent
 from app.agents.nodes.memory import classify_intent, load_memory, save_memory
+from app.agents.nodes.networking import networking_agent
 from app.agents.nodes.respond import format_response, generate_response
 from app.agents.state import LinkAidState
 from app.config import Settings
 from app.services.content import ContentService
 from app.services.llm import LLMService
+from app.services.networking import NetworkingService
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +22,11 @@ logger = logging.getLogger(__name__)
 def _route_after_classify(state: LinkAidState) -> str:
     if state.get("needs_clarification"):
         return "format_response"
-    if state.get("intent") == "content":
+    intent = state.get("intent", "general")
+    if intent == "content":
         return "content_agent"
+    if intent == "networking":
+        return "networking_agent"
     return "generate_response"
 
 
@@ -38,7 +43,10 @@ def build_checkpointer(settings: Settings) -> SqliteSaver:
 def build_graph(
     llm_service: LLMService,
     content_service: ContentService,
+    networking_service: NetworkingService,
     checkpointer: SqliteSaver | None = None,
+    *,
+    hitl_interrupt: bool = False,
 ):
     graph = StateGraph(LinkAidState)
 
@@ -47,6 +55,14 @@ def build_graph(
     graph.add_node(
         "content_agent",
         partial(content_agent, llm_service=llm_service, content_service=content_service),
+    )
+    graph.add_node(
+        "networking_agent",
+        partial(
+            networking_agent,
+            llm_service=llm_service,
+            networking_service=networking_service,
+        ),
     )
     graph.add_node("generate_response", partial(generate_response, llm_service=llm_service))
     graph.add_node("format_response", format_response)
@@ -60,14 +76,17 @@ def build_graph(
         {
             "format_response": "format_response",
             "content_agent": "content_agent",
+            "networking_agent": "networking_agent",
             "generate_response": "generate_response",
         },
     )
     graph.add_edge("content_agent", "format_response")
+    graph.add_edge("networking_agent", "format_response")
     graph.add_edge("generate_response", "format_response")
     graph.add_edge("format_response", "save_memory")
     graph.add_edge("save_memory", END)
 
-    compiled = graph.compile(checkpointer=checkpointer)
-    logger.info("LinkAid supervisor graph compiled with content agent")
+    interrupt_before = ["format_response"] if hitl_interrupt else None
+    compiled = graph.compile(checkpointer=checkpointer, interrupt_before=interrupt_before)
+    logger.info("LinkAid supervisor graph compiled (hitl=%s)", hitl_interrupt)
     return compiled
