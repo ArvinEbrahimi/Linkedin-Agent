@@ -9,12 +9,14 @@ from langgraph.graph import END, START, StateGraph
 from app.agents.nodes.content import content_agent
 from app.agents.nodes.memory import classify_intent, load_memory, save_memory
 from app.agents.nodes.networking import networking_agent
+from app.agents.nodes.profile import profile_agent
 from app.agents.nodes.respond import format_response, generate_response
 from app.agents.state import LinkAidState
 from app.config import Settings
 from app.services.content import ContentService
 from app.services.llm import LLMService
 from app.services.networking import NetworkingService
+from app.services.profile import ProfileService
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,8 @@ def _route_after_classify(state: LinkAidState) -> str:
         return "content_agent"
     if intent == "networking":
         return "networking_agent"
+    if intent == "profile":
+        return "profile_agent"
     return "generate_response"
 
 
@@ -44,6 +48,7 @@ def build_graph(
     llm_service: LLMService,
     content_service: ContentService,
     networking_service: NetworkingService,
+    profile_service: ProfileService,
     checkpointer: SqliteSaver | None = None,
     *,
     hitl_interrupt: bool = False,
@@ -64,6 +69,10 @@ def build_graph(
             networking_service=networking_service,
         ),
     )
+    graph.add_node(
+        "profile_agent",
+        partial(profile_agent, llm_service=llm_service, profile_service=profile_service),
+    )
     graph.add_node("generate_response", partial(generate_response, llm_service=llm_service))
     graph.add_node("format_response", format_response)
     graph.add_node("save_memory", save_memory)
@@ -77,11 +86,13 @@ def build_graph(
             "format_response": "format_response",
             "content_agent": "content_agent",
             "networking_agent": "networking_agent",
+            "profile_agent": "profile_agent",
             "generate_response": "generate_response",
         },
     )
     graph.add_edge("content_agent", "format_response")
     graph.add_edge("networking_agent", "format_response")
+    graph.add_edge("profile_agent", "format_response")
     graph.add_edge("generate_response", "format_response")
     graph.add_edge("format_response", "save_memory")
     graph.add_edge("save_memory", END)

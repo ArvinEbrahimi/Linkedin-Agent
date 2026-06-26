@@ -200,7 +200,7 @@ test(agent): mock Groq for router tests
 | 1 — Core Agent | `[x]` | phase-1/core-agent |
 | 2 — Content | `[x]` | phase-2/content-intelligence |
 | 3 — Networking | `[x]` | phase-3/networking-engine |
-| 4 — Profile | `[ ]` | — |
+| 4 — Profile | `[x]` | phase-4/profile-optimization |
 | 5 — Memory | `[ ]` | — |
 | 6 — Strategy | `[ ]` | — |
 | 7 — UI | `[ ]` | — |

@@ -16,6 +16,7 @@ from app.models.responses import AlternativeOption, LinkAidResponse
 from app.services.content import ContentService
 from app.services.llm import LLMService
 from app.services.networking import NetworkingService
+from app.services.profile import ProfileService
 from app.services.rate_limit import OutreachRateLimiter
 
 
@@ -126,8 +127,15 @@ def networking_service(mock_llm_service, rate_limiter):
 
 
 @pytest.fixture
-def graph(mock_llm_service, content_service, networking_service):
-    return build_graph(mock_llm_service, content_service, networking_service, MemorySaver())
+def profile_service(mock_llm_service):
+    return ProfileService(mock_llm_service)
+
+
+@pytest.fixture
+def graph(mock_llm_service, content_service, networking_service, profile_service):
+    return build_graph(
+        mock_llm_service, content_service, networking_service, profile_service, MemorySaver()
+    )
 
 
 @pytest.mark.asyncio
@@ -174,12 +182,13 @@ async def test_format_response_clarification():
 
 @pytest.mark.asyncio
 async def test_chat_endpoint_with_mock_graph(
-    mock_llm_service, content_service, networking_service, graph
+    mock_llm_service, content_service, networking_service, profile_service, graph
 ):
     app = create_app()
     app.state.graph = graph
     app.state.content_service = content_service
     app.state.networking_service = networking_service
+    app.state.profile_service = profile_service
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -196,7 +205,7 @@ async def test_chat_endpoint_with_mock_graph(
 
 
 @pytest.mark.asyncio
-async def test_chat_endpoint_missing_api_key_returns_error():
+async def test_chat_endpoint_missing_api_key_returns_error(tmp_path):
     app = create_app()
     from app.agents.graph import build_graph
     from app.config import Settings
@@ -204,11 +213,13 @@ async def test_chat_endpoint_missing_api_key_returns_error():
     settings = Settings(groq_api_key=None)
     service = LLMService(settings)
     content = ContentService(service)
-    limiter = OutreachRateLimiter(":memory:", daily_limit=20)
+    limiter = OutreachRateLimiter(str(tmp_path / "outreach.db"), daily_limit=20)
     networking = NetworkingService(service, limiter)
-    app.state.graph = build_graph(service, content, networking, MemorySaver())
+    profile = ProfileService(service)
+    app.state.graph = build_graph(service, content, networking, profile, MemorySaver())
     app.state.content_service = content
     app.state.networking_service = networking
+    app.state.profile_service = profile
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
