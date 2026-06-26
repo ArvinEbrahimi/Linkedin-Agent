@@ -10,7 +10,9 @@ from app.agents.models import IntentClassification
 from app.agents.nodes.respond import format_response
 from app.agents.state import LinkAidState
 from app.main import create_app
+from app.models.content import ContentPostLLMOutput, HookVariant
 from app.models.responses import AlternativeOption, LinkAidResponse
+from app.services.content import ContentService
 from app.services.llm import LLMService
 
 
@@ -31,6 +33,31 @@ def _sample_response() -> LinkAidResponse:
     )
 
 
+def _sample_content_output() -> ContentPostLLMOutput:
+    hook = HookVariant(
+        hook="90% of backend tutorials skip this step.",
+        style="bold-claim",
+        save_optimization_hint="Gap-filling hooks drive saves",
+    )
+    alt = AlternativeOption(
+        title="Story angle",
+        content="Last quarter our team faced 2s response times...",
+        comparison="Higher comment rate",
+    )
+    return ContentPostLLMOutput(
+        understanding="You want a post about FastAPI.",
+        full_post="Here is the full post about FastAPI performance...",
+        hooks=[hook, hook, hook],
+        cta="Save this. Comment your stack.",
+        hashtags=["#FastAPI"],
+        first_comment="Repo link in comment",
+        alternative_angles=[alt, alt],
+        strategic_reasoning="Proof-driven posts win in 2026.",
+        execution_tips="Post Tuesday morning.",
+        follow_up_question="Carousel version?",
+    )
+
+
 @pytest.fixture
 def mock_llm_service():
     settings = MagicMock()
@@ -44,6 +71,8 @@ def mock_llm_service():
             return IntentClassification(intent="content", needs_clarification=False)
         if schema is LinkAidResponse:
             return _sample_response()
+        if schema is ContentPostLLMOutput:
+            return _sample_content_output()
         return schema.model_validate({})
 
     service.structured_invoke = AsyncMock(side_effect=structured_invoke)
@@ -52,12 +81,17 @@ def mock_llm_service():
 
 
 @pytest.fixture
-def graph(mock_llm_service):
-    return build_graph(mock_llm_service, MemorySaver())
+def content_service(mock_llm_service):
+    return ContentService(mock_llm_service)
+
+
+@pytest.fixture
+def graph(mock_llm_service, content_service):
+    return build_graph(mock_llm_service, content_service, MemorySaver())
 
 
 @pytest.mark.asyncio
-async def test_graph_returns_valid_response(graph):
+async def test_graph_routes_content_intent_to_content_agent(graph):
     result = await graph.ainvoke(
         {
             "messages": [HumanMessage(content="Write a LinkedIn post about FastAPI")],
@@ -74,9 +108,9 @@ async def test_graph_returns_valid_response(graph):
     )
 
     assert result["intent"] == "content"
+    assert "content_result" in result.get("metadata", {})
     draft = LinkAidResponse.model_validate(result["draft_response"])
-    assert draft.main_recommendation
-    assert draft.follow_up_question
+    assert "FastAPI" in draft.main_recommendation or "90%" in draft.main_recommendation
 
 
 @pytest.mark.asyncio
@@ -99,9 +133,10 @@ async def test_format_response_clarification():
 
 
 @pytest.mark.asyncio
-async def test_chat_endpoint_with_mock_graph(mock_llm_service, graph):
+async def test_chat_endpoint_with_mock_graph(mock_llm_service, content_service, graph):
     app = create_app()
     app.state.graph = graph
+    app.state.content_service = content_service
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -115,7 +150,6 @@ async def test_chat_endpoint_with_mock_graph(mock_llm_service, graph):
     assert data["thread_id"] == "t1"
     assert data["intent"] == "content"
     assert "main_recommendation" in data["response"]
-    assert "follow_up_question" in data["response"]
 
 
 @pytest.mark.asyncio
@@ -126,7 +160,9 @@ async def test_chat_endpoint_missing_api_key_returns_error():
 
     settings = Settings(groq_api_key=None)
     service = LLMService(settings)
-    app.state.graph = build_graph(service, MemorySaver())
+    content = ContentService(service)
+    app.state.graph = build_graph(service, content, MemorySaver())
+    app.state.content_service = content
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

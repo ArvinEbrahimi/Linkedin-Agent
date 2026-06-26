@@ -6,10 +6,12 @@ from pathlib import Path
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 
+from app.agents.nodes.content import content_agent
 from app.agents.nodes.memory import classify_intent, load_memory, save_memory
 from app.agents.nodes.respond import format_response, generate_response
 from app.agents.state import LinkAidState
 from app.config import Settings
+from app.services.content import ContentService
 from app.services.llm import LLMService
 
 logger = logging.getLogger(__name__)
@@ -18,6 +20,8 @@ logger = logging.getLogger(__name__)
 def _route_after_classify(state: LinkAidState) -> str:
     if state.get("needs_clarification"):
         return "format_response"
+    if state.get("intent") == "content":
+        return "content_agent"
     return "generate_response"
 
 
@@ -31,11 +35,19 @@ def build_checkpointer(settings: Settings) -> SqliteSaver:
     return SqliteSaver(conn)
 
 
-def build_graph(llm_service: LLMService, checkpointer: SqliteSaver | None = None):
+def build_graph(
+    llm_service: LLMService,
+    content_service: ContentService,
+    checkpointer: SqliteSaver | None = None,
+):
     graph = StateGraph(LinkAidState)
 
     graph.add_node("load_memory", load_memory)
     graph.add_node("classify_intent", partial(classify_intent, llm_service=llm_service))
+    graph.add_node(
+        "content_agent",
+        partial(content_agent, llm_service=llm_service, content_service=content_service),
+    )
     graph.add_node("generate_response", partial(generate_response, llm_service=llm_service))
     graph.add_node("format_response", format_response)
     graph.add_node("save_memory", save_memory)
@@ -45,12 +57,17 @@ def build_graph(llm_service: LLMService, checkpointer: SqliteSaver | None = None
     graph.add_conditional_edges(
         "classify_intent",
         _route_after_classify,
-        {"format_response": "format_response", "generate_response": "generate_response"},
+        {
+            "format_response": "format_response",
+            "content_agent": "content_agent",
+            "generate_response": "generate_response",
+        },
     )
+    graph.add_edge("content_agent", "format_response")
     graph.add_edge("generate_response", "format_response")
     graph.add_edge("format_response", "save_memory")
     graph.add_edge("save_memory", END)
 
     compiled = graph.compile(checkpointer=checkpointer)
-    logger.info("LinkAid supervisor graph compiled")
+    logger.info("LinkAid supervisor graph compiled with content agent")
     return compiled
