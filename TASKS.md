@@ -195,6 +195,27 @@
 
 ---
 
+## Phase 10 — Browser Extension
+
+**Branch:** `phase-10/browser-extension`  
+**PR title:** `feat: Chrome extension for in-context LinkedIn suggestions`
+
+| ID | Task | Branch | Acceptance Criteria |
+|----|------|--------|---------------------|
+| 10.1 | Extension scaffold | `task/10.1-ext-scaffold` | Manifest V3, popup, background worker |
+| 10.2 | Profile extraction | `task/10.2-extract` | DOM extract on `/in/*` profile pages |
+| 10.3 | API bridge | `task/10.3-api-bridge` | Background fetch to LinkAid API |
+| 10.4 | In-page panel | `task/10.4-panel` | Analyze profile + draft post on linkedin.com |
+| 10.5 | Extension docs | `task/10.5-ext-docs` | Load unpacked instructions in extension/README |
+
+**Phase 10 done when:** On LinkedIn profile page, extension returns connection request draft from API.
+
+**Status:** `[x]` complete — merged to `main`
+
+---
+
+## Git Workflow (Per Task)
+
 ```bash
 git checkout main && git pull
 git checkout -b task/X.Y-short-name
@@ -225,9 +246,13 @@ test(agent): mock Groq for router tests
 | 3 — Networking | `[x]` | phase-3/networking-engine |
 | 4 — Profile | `[x]` | phase-4/profile-optimization |
 | 5 — Memory | `[x]` | phase-5/memory-advisor |
-| 6 — Strategy | `[ ]` | — |
-| 7 — UI | `[ ]` | — |
-| 8 — Deploy | `[ ]` | — |
+| 6 — Strategy | `[x]` | phase-6/strategy-branding |
+| 7 — UI | `[x]` | phase-7/streamlit-ui |
+| 8 — Deploy | `[x]` | phase-8/deploy-observability |
+| 9 — LinkedIn | `[x]` | phase-9/linkedin-connect |
+| 10 — Extension | `[x]` | phase-10/browser-extension |
+
+**All planned v1 phases complete.**
 
 ---
 

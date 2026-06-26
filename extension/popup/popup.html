@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LinkAid</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>🔗 LinkAid</h1>
+    <p class="tagline">Suggest-only LinkedIn assistant</p>
+  </header>
+
+  <section>
+    <label for="apiUrl">API URL</label>
+    <input id="apiUrl" type="url" placeholder="http://localhost:8000" />
+
+    <label for="userId">User ID</label>
+    <input id="userId" type="text" placeholder="default" />
+
+    <button id="save" type="button">Save settings</button>
+  </section>
+
+  <section id="status-section">
+    <div id="api-status" class="pill">Checking API…</div>
+    <div id="li-status" class="pill muted">LinkedIn: —</div>
+  </section>
+
+  <section class="actions">
+    <p>Open a LinkedIn <strong>profile</strong> or <strong>feed</strong> page — the LinkAid panel appears bottom-right.</p>
+    <a id="open-ui" href="http://localhost:8501" target="_blank">Open Streamlit UI</a>
+  </section>
+
+  <footer>⚠️ Never auto-posts. You stay in control.</footer>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

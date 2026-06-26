@@ -28,6 +28,7 @@
 - [Product Specification](docs/PRODUCT_SPEC.md)
 - [Technical Architecture](docs/ARCHITECTURE.md)
 - [LinkedIn Setup](docs/LINKEDIN_SETUP.md) ← OAuth + data import
+- [Browser Extension](extension/README.md) ← in-context on linkedin.com
 - [Implementation Tasks](TASKS.md) ← start here for development
 
 ## Project Status
@@ -41,9 +42,12 @@
 ✅ **Phase 6 complete** — Strategy & Branding, narrative/competitor/calendar APIs  
 ✅ **Phase 7 complete** — Streamlit UI (chat, onboarding, module tabs, RTL, copy)  
 ✅ **Phase 8 complete** — LangFuse, Docker Compose, CI, E2E smoke, OpenAPI docs  
-✅ **Phase 9 complete** — LinkedIn OAuth, data import, Setup UI
+✅ **Phase 9 complete** — LinkedIn OAuth, data import, Setup UI  
+✅ **Phase 10 complete** — Chrome extension for in-context LinkedIn suggestions
 
-See [TASKS.md](TASKS.md) for the full phased roadmap (8 phases, 50+ tasks).
+**v1 roadmap complete** — see [TASKS.md](TASKS.md) for v2 ideas (Next.js UI, team mode).
+
+See [TASKS.md](TASKS.md) for the full phased roadmap (10 phases).
 
 ## Quick Start (after Phase 0)
 
@@ -74,6 +78,10 @@ make docker-up
 # E2E smoke (API must be running)
 make e2e
 make e2e-chat   # also tests /chat (needs GROQ_API_KEY)
+
+# Browser extension (Phase 10+)
+# 1. make run   2. chrome://extensions → Load unpacked → extension/
+python scripts/generate_extension_icons.py   # if icons missing
 ```
 
 ## Development Workflow

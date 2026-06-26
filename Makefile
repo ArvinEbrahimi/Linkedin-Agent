@@ -34,6 +34,9 @@ e2e:
 e2e-chat:
 	python scripts/e2e_smoke.py --chat
 
+extension-icons:
+	python scripts/generate_extension_icons.py
+
 clean:
 	rm -rf .pytest_cache .ruff_cache dist build *.egg-info
 	find . -type d -name __pycache__ -exec rm -rf {} +

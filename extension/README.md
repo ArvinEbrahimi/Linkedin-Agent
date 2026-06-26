@@ -1,21 +1,52 @@
-# LinkAid Browser Extension (planned)
+# LinkAid Chrome Extension
 
-Read-only context from an open LinkedIn tab — **no automation**.
+Read-only in-context assistant on **linkedin.com** — connects to your local LinkAid API.
 
-## Planned capabilities
+> Suggest-only. Never auto-posts or sends messages. You review and click Post/Connect yourself.
 
-- Detect when user is on `linkedin.com/feed` or profile pages
-- One-click: send visible profile text to LinkAid `/networking/analyze`
-- One-click: copy compose-box draft from LinkAid `/content/post`
-- Show connection status to local LinkAid API
+## Prerequisites
 
-## Not planned
+1. LinkAid API running: `make run` (http://localhost:8000)
+2. `GROQ_API_KEY` in `.env` for AI features
+3. Chrome or Edge (Chromium)
 
-- Auto-post, auto-connect, or scraping at scale (ToS risk)
+## Install (unpacked)
 
-## Stack (TBD)
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. **Load unpacked** → select the `extension/` folder in this repo
+4. Click the LinkAid icon → set API URL and User ID (match Streamlit sidebar)
 
-- Manifest V3 Chrome extension
-- Communicates with `LINKAID_API_URL` (default `http://localhost:8000`)
+## Usage on LinkedIn
 
-See Phase 10 in `TASKS.md` when scheduled.
+| Page | Action |
+|------|--------|
+| **Profile** (`/in/username`) | Floating panel → **Analyze this profile** → SWOT + connection draft |
+| **Feed / Compose** | **Draft post idea** → inserts text into compose box (you post manually) |
+
+## Architecture
+
+```
+linkedin.com page
+  └── content/content.js  (extract DOM, floating panel)
+        └── chrome.runtime.sendMessage
+              └── background.js  (service worker)
+                    └── lib/api.js → localhost:8000
+```
+
+API calls go through the **background service worker** (no CORS issues).
+
+## Configuration
+
+Stored in `chrome.storage.sync`:
+
+- `apiUrl` — default `http://localhost:8000`
+- `userId` — must match Streamlit/API user for memory
+
+## Limitations
+
+- LinkedIn DOM changes may break profile extraction — fallback uses visible main text
+- No access to private analytics or connections via API
+- Extension does not replace Streamlit UI — use both together
+
+See [docs/LINKEDIN_SETUP.md](../docs/LINKEDIN_SETUP.md) for OAuth and data import.
