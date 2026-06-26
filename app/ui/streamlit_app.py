@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import os
-import uuid
 
 import streamlit as st
 
 from app.ui.api_client import LinkAidAPIError, LinkAidClient
-from app.ui.components import inject_global_styles, render_disclaimer
+from app.ui.auth_page import render_auth_gate, render_logout_button
+from app.ui.components import NAV_OPTIONS, inject_global_styles, nav_label, render_brand_header, render_disclaimer
 from app.ui.onboarding import render_onboarding
+from app.ui.session_helpers import (
+    init_language_mix,
+    init_sidebar_language_widget,
+    sync_language_mix_from_sidebar,
+)
 from app.ui.tabs.advisor import render_advisor_tab
 from app.ui.tabs.chat import render_chat_tab
 from app.ui.tabs.content import render_content_tab
@@ -20,128 +25,152 @@ from app.ui.tabs.strategy import render_strategy_tab
 
 st.set_page_config(
     page_title="LinkAid",
-    page_icon="🔗",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 
 def _init_session() -> None:
-    if "user_id" not in st.session_state:
-        st.session_state.user_id = f"user-{str(uuid.uuid4())[:8]}"
-    if "language_mix" not in st.session_state:
-        st.session_state.language_mix = "fa-en"
-
-    params = st.query_params
-    if params.get("linkedin") == "connected":
-        linked_user = params.get("user_id")
-        if linked_user:
-            st.session_state.user_id = linked_user
-        st.session_state.linkedin_just_connected = True
-        st.query_params.clear()
-
-
-def _render_sidebar() -> LinkAidClient:
-    st.sidebar.title("🔗 LinkAid")
-    st.sidebar.caption("Personal branding assistant for Iranian software engineers")
+    init_language_mix()
 
     if "api_url" not in st.session_state:
         st.session_state.api_url = os.getenv("LINKAID_API_URL", "http://localhost:8000")
 
-    st.sidebar.text_input(
-        "API URL",
-        key="api_url",
-        help="FastAPI backend — run `make run` in another terminal",
-    )
-    client = LinkAidClient(base_url=st.session_state.api_url)
+    if "active_page" not in st.session_state:
+        st.session_state.active_page = "chat"
 
-    st.sidebar.text_input("User ID", key="user_id")
+    params = st.query_params
+    if params.get("linkedin") == "connected":
+        linked_user = params.get("user_id")
+        if linked_user and st.session_state.get("access_token"):
+            if linked_user == st.session_state.get("user_id"):
+                st.session_state.linkedin_just_connected = True
+        st.query_params.clear()
+
+
+def _make_client() -> LinkAidClient:
+    return LinkAidClient(
+        base_url=st.session_state.api_url,
+        access_token=st.session_state.get("access_token"),
+    )
+
+
+def _render_sidebar(client: LinkAidClient, user_id: str) -> str:
+    display = st.session_state.get("display_name") or "کاربر"
+    email = st.session_state.get("user_email", "")
+    st.sidebar.markdown(f"### {display}")
+    if email:
+        st.sidebar.caption(email)
+
+    init_sidebar_language_widget()
     st.sidebar.selectbox(
-        "UI language mix",
+        "زبان",
         ["fa-en", "en"],
-        key="language_mix",
+        key="ui_language_mix",
+        format_func=lambda x: "فارسی-انگلیسی" if x == "fa-en" else "English",
     )
 
-    try:
-        health = client.health()
-        ready = client.ready()
-        status_line = f"API online — {health.get('app')} v{health.get('version')}"
-        if not ready.get("groq_configured"):
-            st.sidebar.warning("Groq not configured — set GROQ_API_KEY")
-        else:
-            st.sidebar.success(status_line)
-    except LinkAidAPIError as exc:
-        st.sidebar.error(str(exc))
+    bundle = client.get_status_bundle(user_id)
+    if bundle.get("error"):
+        st.sidebar.error(bundle["error"])
+    elif bundle.get("ready") and not bundle["ready"].get("groq_configured"):
+        st.sidebar.warning("Groq تنظیم نشده")
+    elif bundle.get("health"):
+        health = bundle["health"]
+        st.sidebar.success(f"Online · v{health.get('version')}")
 
-    try:
-        li = client.linkedin_status(st.session_state.user_id)
-        if li.get("connected"):
-            st.sidebar.caption(f"LinkedIn: {li.get('name', 'connected')}")
-    except LinkAidAPIError:
-        pass
+    li = bundle.get("linkedin") or {}
+    if li.get("connected"):
+        st.sidebar.caption(f"LinkedIn · {li.get('name', 'connected')}")
 
-    if st.sidebar.button("Reset onboarding"):
+    st.sidebar.markdown("---")
+    page = st.sidebar.radio(
+        "Navigation",
+        options=list(NAV_OPTIONS.keys()),
+        format_func=nav_label,
+        key="active_page",
+        label_visibility="collapsed",
+    )
+
+    if st.sidebar.button("Refresh status", use_container_width=True):
+        client.invalidate_status_cache()
+        st.rerun()
+
+    if st.sidebar.button("Reset onboarding", use_container_width=True):
         st.session_state.onboarding_complete = False
         st.session_state.onboarding_step = 0
         st.rerun()
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(
-        "**Modules:** Chat · Content · Networking · Profile · Advisor · Strategy"
-    )
-    return client
+    render_logout_button()
+    return page
+
+
+def _page_icon(page: str) -> str:
+    return NAV_OPTIONS.get(page, ("hub", ""))[0]
+
+
+def _page_subtitle(page: str, language_mix: str) -> str:
+    subtitles = {
+        "chat": "گفتگوی هوشمند برای برندسازی لینکدین",
+        "setup": "تنظیمات، LinkedIn و import داده",
+        "content": "پیشنهاد پست و کمپین",
+        "networking": "تحلیل و outreach",
+        "profile": "بهینه‌سازی پروفایل",
+        "advisor": "مشاور روزانه",
+        "strategy": "استراتژی و برند",
+    }
+    if language_mix == "en":
+        return "Your LinkedIn personal branding workspace"
+    return subtitles.get(page, "فضای کار برندسازی لینکدین")
+
+
+def _render_active_page(page: str, client: LinkAidClient, user_id: str, language_mix: str) -> None:
+    if page == "setup":
+        render_setup_tab(client, user_id)
+    elif page == "chat":
+        render_chat_tab(client, user_id, language_mix)
+    elif page == "content":
+        render_content_tab(client, language_mix)
+    elif page == "networking":
+        render_networking_tab(client, user_id, language_mix)
+    elif page == "profile":
+        render_profile_tab(client, language_mix)
+    elif page == "advisor":
+        render_advisor_tab(client, user_id, language_mix)
+    elif page == "strategy":
+        render_strategy_tab(client, user_id, language_mix)
 
 
 def main() -> None:
     _init_session()
     inject_global_styles()
 
-    client = _render_sidebar()
+    client = _make_client()
+
+    if not render_auth_gate(client):
+        return
+
     user_id = st.session_state.user_id
+    page = _render_sidebar(client, user_id)
+    sync_language_mix_from_sidebar()
     language_mix = st.session_state.language_mix
+
+    render_brand_header(
+        nav_label(page),
+        _page_subtitle(page, language_mix),
+        icon=_page_icon(page),
+    )
     render_disclaimer(language_mix)
 
-    if st.session_state.get("linkedin_just_connected"):
+    if st.session_state.pop("linkedin_just_connected", False):
         st.success("LinkedIn connected — complete onboarding or import your data export.")
-        st.session_state.linkedin_just_connected = False
 
     if render_onboarding(client, user_id):
-        with st.expander("Or connect LinkedIn / import data first", expanded=False):
+        with st.expander("Connect LinkedIn or import data first", expanded=False):
             render_setup_tab(client, user_id)
         return
 
-    tab_setup, tab_chat, tab_content, tab_net, tab_prof, tab_advisor, tab_strategy = st.tabs(
-        [
-            "⚙️ Setup",
-            "💬 Chat",
-            "📝 Content",
-            "🤝 Networking",
-            "👤 Profile",
-            "☀️ Advisor",
-            "🎯 Strategy",
-        ]
-    )
-
-    with tab_setup:
-        render_setup_tab(client, user_id)
-
-    with tab_chat:
-        render_chat_tab(client, user_id, language_mix)
-
-    with tab_content:
-        render_content_tab(client, language_mix)
-
-    with tab_net:
-        render_networking_tab(client, user_id, language_mix)
-
-    with tab_prof:
-        render_profile_tab(client, language_mix)
-
-    with tab_advisor:
-        render_advisor_tab(client, user_id, language_mix)
-
-    with tab_strategy:
-        render_strategy_tab(client, user_id, language_mix)
+    _render_active_page(page, client, user_id, language_mix)
 
 
 if __name__ == "__main__":
