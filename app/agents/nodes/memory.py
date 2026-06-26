@@ -16,14 +16,22 @@ a LinkedIn personal branding assistant.
 Classify the user's message into exactly one intent:
 - content: posts, carousels, video scripts, hooks, campaigns
 - networking: connection requests, icebreakers, profile outreach
-- profile: headline, about, experience, skills optimization
+- profile: headline, about, experience, skills optimization, OR questions about
+  how/where to improve their LinkedIn profile
 - advisor: daily briefing, post performance, outreach plan
 - strategy: personal narrative, competitors, content calendar
-- general: anything else or mixed requests
+- general: greetings, thanks, mixed or unclear requests
 
-Set needs_clarification=true only when the message is too vague to help
-(e.g. "help me with LinkedIn" with no context). Provide a specific
-clarification_question in Persian or English matching the user's language."""
+Rules for needs_clarification:
+- Set FALSE for greetings (سلام, hello, hi) → intent=general
+- Set FALSE for profile improvement questions (e.g. "از کجا شروع کنم برای پروفایل",
+  "how to improve my profile", "where should I start") → intent=profile
+- Set FALSE when user context already includes niche, role, or goals
+- Set TRUE only when the message is extremely vague AND no context exists
+  (e.g. single word "help" with empty profile)
+
+Provide clarification_question only when needs_clarification=true.
+Match the user's language (Persian or English)."""
 
 
 async def load_memory(state: LinkAidState, memory_service: MemoryService) -> dict:
@@ -45,8 +53,13 @@ async def load_memory(state: LinkAidState, memory_service: MemoryService) -> dic
 
 async def classify_intent(state: LinkAidState, llm_service: LLMService) -> dict:
     last_message = state["messages"][-1]
+    context = state.get("user_context") or {}
+    context_note = ""
+    if context:
+        context_note = f"\n\nKnown user context (use to avoid unnecessary clarification):\n{context}"
+
     classification = await llm_service.structured_invoke(
-        [SystemMessage(content=CLASSIFY_SYSTEM), last_message],
+        [SystemMessage(content=CLASSIFY_SYSTEM + context_note), last_message],
         IntentClassification,
     )
     logger.info(

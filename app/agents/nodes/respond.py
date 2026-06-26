@@ -13,6 +13,20 @@ async def generate_response(state: LinkAidState, llm_service: LLMService) -> dic
     intent = state.get("intent", "general")
     system_prompt = llm_service.build_system_prompt(intent, state.get("user_context"))
 
+    if state.get("needs_clarification"):
+        question = state.get("clarification_question") or (
+            "هدف اصلی‌تان در لینکدین و حوزه تخصصی‌تان چیست؟"
+        )
+        system_prompt += (
+            "\n\nThe user's message is somewhat vague. Still provide a genuinely helpful "
+            f"recommendation using any available context. End with this follow-up question: {question}"
+        )
+    elif intent == "general":
+        system_prompt += (
+            "\n\nFor greetings or casual openers, respond warmly and suggest 2-3 concrete "
+            "next steps they can take with LinkAid (profile, content, networking)."
+        )
+
     response = await llm_service.structured_invoke(
         [SystemMessage(content=system_prompt), *state["messages"]],
         LinkAidResponse,

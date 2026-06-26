@@ -151,6 +151,80 @@ def profile_to_linkaid(response: ProfileOptimizeResponse) -> LinkAidResponse:
     )
 
 
+PROFILE_ADVISORY_SYSTEM = """You are a LinkedIn profile strategist for software engineers.
+
+The user is asking for guidance on improving their profile — NOT pasting text to rewrite.
+Give a clear, ordered roadmap (3-5 steps) tailored to their context.
+Mention headline, about, experience, featured, and skills when relevant.
+Respond in the user's language (Persian if they wrote in Persian).
+
+Structure your answer as LinkAidResponse:
+- understanding: what they want
+- main_recommendation: numbered step-by-step roadmap (actionable)
+- alternatives: 2 optional approaches if useful
+- strategic_reasoning: why this order works in 2026 LinkedIn algorithm
+- execution_tips: quick wins for this week
+- follow_up_question: one specific next question"""
+
+
+def _is_profile_advisory(text: str) -> bool:
+    normalized = text.strip().lower()
+    if len(normalized) > 280:
+        return False
+    advisory_markers = (
+        "از کجا شروع",
+        "چطور بهتر",
+        "چگونه بهتر",
+        "بهتر کنم",
+        "بهبود",
+        "راهنمایی",
+        "کمک کن",
+        "where to start",
+        "how to improve",
+        "how do i improve",
+        "what should i",
+        "which section",
+        "کدوم بخش",
+        "اول چی",
+        "first step",
+    )
+    if any(marker in normalized for marker in advisory_markers):
+        return True
+    return "?" in normalized and len(normalized) < 160
+
+
+def _infer_profile_section(text: str) -> ProfileSection:
+    normalized = text.lower()
+    if any(w in normalized for w in ("headline", "عنوان", "تیتر", "head line")):
+        return "headline"
+    if any(w in normalized for w in ("about", "درباره", "bio", "بیو")):
+        return "about"
+    if any(w in normalized for w in ("experience", "سوابق", "تجربه")):
+        return "experience"
+    if any(w in normalized for w in ("skill", "مهارت")):
+        return "skills"
+    if any(w in normalized for w in ("featured", "برجسته")):
+        return "featured"
+    return "full"
+
+
+def _profile_baseline_from_context(ctx: dict) -> str:
+    parts = []
+    if ctx.get("linkedin_headline"):
+        parts.append(f"Headline: {ctx['linkedin_headline']}")
+    if ctx.get("about_summary"):
+        parts.append(f"About: {ctx['about_summary']}")
+    if ctx.get("niche"):
+        parts.append(f"Niche: {ctx['niche']}")
+    if ctx.get("role"):
+        parts.append(f"Role: {ctx['role']}")
+    if ctx.get("goals"):
+        parts.append(f"Goals: {', '.join(ctx['goals'])}")
+    if ctx.get("tech_stack"):
+        parts.append(f"Tech: {', '.join(ctx['tech_stack'])}")
+    return "\n".join(parts)
+
+
 class ProfileService:
     def __init__(self, llm_service: LLMService) -> None:
         self.llm = llm_service
@@ -183,14 +257,34 @@ class ProfileService:
             follow_up_question=output.follow_up_question,
         )
 
+    async def advise_from_messages(
+        self,
+        messages: list[BaseMessage],
+        user_context: dict | None = None,
+    ) -> LinkAidResponse:
+        ctx = user_context or {}
+        baseline = _profile_baseline_from_context(ctx)
+        context_block = f"\n\n## Saved profile context\n{baseline}" if baseline else (
+            "\n\n## Saved profile context\n(No profile saved yet — give a generic engineer roadmap.)"
+        )
+        system = f"{load_base_prompt()}\n\n{PROFILE_ADVISORY_SYSTEM}{context_block}"
+        return await self.llm.structured_invoke(
+            [SystemMessage(content=system), *messages],
+            LinkAidResponse,
+        )
+
     async def optimize_from_messages(
         self,
         messages: list[BaseMessage],
         user_context: dict | None = None,
         section: ProfileSection = "headline",
+        *,
+        current_content: str | None = None,
     ) -> ProfileOptimizeResponse:
         last = messages[-1]
-        content = last.content if isinstance(last.content, str) else str(last.content)
+        content = current_content or (
+            last.content if isinstance(last.content, str) else str(last.content)
+        )
         ctx = user_context or {}
         return await self.optimize(
             ProfileOptimizeRequest(
@@ -199,6 +293,6 @@ class ProfileService:
                 role=ctx.get("role"),
                 years_experience=ctx.get("years_experience"),
                 tech_stack=ctx.get("tech_stack", []),
-                target_goal=ctx.get("target_goal"),
+                target_goal=(ctx.get("goals") or [None])[0] if ctx.get("goals") else None,
             )
         )
