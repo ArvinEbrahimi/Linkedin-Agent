@@ -1,0 +1,36 @@
+---
+description: Python, LangGraph, and Groq patterns for LinkAid agent code
+globs: app/**/*.py
+alwaysApply: false
+---
+
+# Python & LangGraph Patterns
+
+## Project Layout
+
+- `app/agents/` — graphs, nodes, prompts (no business logic in routes)
+- `app/models/` — Pydantic schemas only
+- `app/services/` — LLM, memory, search (injectable, mockable)
+
+## LangGraph
+
+- Use `LinkAidState` with `add_messages` reducer
+- SqliteSaver checkpointer in dev; compile graph once at startup
+- Router node returns intent; specialist nodes return partial state
+- `format_response` node enforces `LinkAidResponse` before END
+
+## LLM (Groq)
+
+```python
+# Structured output + retry
+response = await llm.with_structured_output(LinkAidResponse).ainvoke(messages)
+```
+
+- System prompts in `app/agents/prompts/` as `.md` or constants
+- Log model, latency, token usage to metadata field
+
+## FastAPI
+
+- Versioned routes: `/api/v1/...`
+- Dependency injection for graph, memory, settings
+- Return Pydantic models; never raw dicts from endpoints

@@ -1,0 +1,31 @@
+---
+description: LinkAid product rules — suggest-only, Iranian context, response format
+alwaysApply: true
+---
+
+# LinkAid Product Constraints
+
+## Hard Rules
+
+- **Suggest only** — never auto-post, message, or scrape LinkedIn in violation of ToS
+- **Max 20** connection request suggestions per user per day
+- **Every response** follows 6 sections: Understanding → Recommendation → Alternatives → Reasoning → Tips → Follow-up
+- **Context first** — ask clarifying questions when user profile or goal is unclear
+
+## 2026 Algorithm (Embed in Prompts)
+
+- Saves > likes; document carousels highest engagement; personal profiles > company pages
+- Hook in first 3 seconds; 2–5 quality posts/week; links in first comment not post body
+- First 60 minutes commenting matters
+
+## Iranian User Reality
+
+- Account for sanctions, connectivity, Groq free tier limits
+- Natural Persian + technical English; warm senior-consultant tone
+- Realistic job market: remote intl. + Iranian tech companies
+
+## Reference Docs
+
+- `docs/PRODUCT_SPEC.md` — capabilities and schemas
+- `docs/ARCHITECTURE.md` — LangGraph design
+- `TASKS.md` — implementation order

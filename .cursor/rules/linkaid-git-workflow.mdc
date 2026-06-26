@@ -1,0 +1,33 @@
+---
+description: LinkAid git branch, commit, push, and PR workflow per task and phase
+alwaysApply: true
+---
+
+# Git Workflow — Mandatory
+
+## Per Task
+
+1. `git checkout main && git pull`
+2. Create branch: `task/X.Y-short-description` (see TASKS.md)
+3. Implement only that task's acceptance criteria
+4. Run tests/lint before commit
+5. Commit with conventional message: `feat(scope): description`
+6. `git push -u origin <branch>`
+
+## Per Phase
+
+1. Merge task branches into phase branch (e.g. `phase-1/core-agent`) via PR
+2. When phase acceptance criteria met, open PR: `phase-N → main`
+3. PR title matches TASKS.md (e.g. `feat: LangGraph supervisor and Groq LLM integration`)
+4. Merge to `main` only after CI passes (once CI exists)
+
+## Never
+
+- Force push to `main`
+- Skip hooks unless user explicitly requests
+- Commit `.env` or API keys
+- Bundle unrelated tasks in one commit
+
+## Update TASKS.md
+
+Mark completed tasks `[x]` and add PR link in the progress table when merging.
