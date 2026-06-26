@@ -197,7 +197,7 @@ test(agent): mock Groq for router tests
 | Phase | Status | PR |
 |-------|--------|-----|
 | 0 — Foundation | `[x]` | phase-0/project-foundation |
-| 1 — Core Agent | `[ ]` | — |
+| 1 — Core Agent | `[x]` | phase-1/core-agent |
 | 2 — Content | `[ ]` | — |
 | 3 — Networking | `[ ]` | — |
 | 4 — Profile | `[ ]` | — |

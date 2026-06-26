@@ -5,6 +5,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app import __version__
+from app.agents import init_agent
+from app.api.routes.chat import router as chat_router
 from app.api.routes.health import router as health_router
 from app.config import get_settings
 from app.core.exceptions import LinkAidError
@@ -18,6 +20,11 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     setup_logging(settings)
     logger.info("Starting %s v%s [%s]", settings.app_name, settings.app_version, settings.env)
+
+    graph = init_agent(settings)
+    app.state.graph = graph
+    logger.info("Agent graph ready")
+
     yield
     logger.info("Shutting down %s", settings.app_name)
 
@@ -33,6 +40,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(chat_router, prefix="/api/v1")
 
     @app.exception_handler(LinkAidError)
     async def linkaid_error_handler(_request: Request, exc: LinkAidError) -> JSONResponse:

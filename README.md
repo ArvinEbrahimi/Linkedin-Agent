@@ -32,7 +32,8 @@
 ## Project Status
 
 ✅ **Phase 0 complete** — FastAPI scaffold, models, tests  
-🚧 **Phase 1 in progress** — LangGraph + Groq core agent
+✅ **Phase 1 complete** — LangGraph supervisor, Groq LLM, `/api/v1/chat`  
+🚧 **Phase 2 next** — Content Intelligence agent
 
 See [TASKS.md](TASKS.md) for the full phased roadmap (8 phases, 50+ tasks).
 

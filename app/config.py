@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     groq_api_key: str | None = Field(default=None, alias="GROQ_API_KEY")
+    groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
+    checkpoint_db_path: str = Field(default="./data/checkpoints.db", alias="CHECKPOINT_DB_PATH")
     tavily_api_key: str | None = Field(default=None, alias="TAVILY_API_KEY")
 
     langfuse_public_key: str | None = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")
